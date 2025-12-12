@@ -16,7 +16,11 @@ class DashboardScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Row(
           children: [
-            Icon(Icons.show_chart, size: 24),
+            Image.asset(
+              'assets/images/white_logo.png',
+              height: 24,
+              fit: BoxFit.contain,
+            ),
             const SizedBox(width: 8),
             Text('KodaStock'),
           ],
