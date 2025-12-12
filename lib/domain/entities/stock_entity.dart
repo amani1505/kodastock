@@ -1,6 +1,5 @@
-import 'package:equatable/equatable.dart';
-
-class StockEntity extends Equatable {
+class StockEntity {
+  final int? id;
   final String symbol;
   final String name;
   final double currentPrice;
@@ -12,66 +11,108 @@ class StockEntity extends Equatable {
   final DateTime? lastUpdated;
 
   const StockEntity({
+    this.id,
     required this.symbol,
     required this.name,
     required this.currentPrice,
-    required this.changePercent,
-    required this.change,
-    required this.volume,
+    this.changePercent = 0.0,
+    this.change = 0.0,
+    this.volume = 0.0,
     this.sector,
     this.marketCap,
     this.lastUpdated,
   });
 
+  // Existing getters
+  bool get isPositive => change >= 0;
+  bool get isNegative => change < 0;
+
+  // Add these new getters
   bool get isGainer => changePercent > 0;
   bool get isLoser => changePercent < 0;
 
+  StockEntity copyWith({
+    int? id,
+    String? symbol,
+    String? name,
+    double? currentPrice,
+    double? changePercent,
+    double? change,
+    double? volume,
+    String? sector,
+    double? marketCap,
+    DateTime? lastUpdated,
+  }) {
+    return StockEntity(
+      id: id ?? this.id,
+      symbol: symbol ?? this.symbol,
+      name: name ?? this.name,
+      currentPrice: currentPrice ?? this.currentPrice,
+      changePercent: changePercent ?? this.changePercent,
+      change: change ?? this.change,
+      volume: volume ?? this.volume,
+      sector: sector ?? this.sector,
+      marketCap: marketCap ?? this.marketCap,
+      lastUpdated: lastUpdated ?? this.lastUpdated,
+    );
+  }
+
   @override
-  List<Object?> get props => [
-        symbol,
-        name,
-        currentPrice,
-        changePercent,
-        change,
-        volume,
-        sector,
-        marketCap,
-        lastUpdated,
-      ];
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is StockEntity && other.symbol == symbol;
+  }
+
+  @override
+  int get hashCode => symbol.hashCode;
+
+  @override
+  String toString() {
+    return 'StockEntity(id: $id, symbol: $symbol, name: $name, price: $currentPrice)';
+  }
 }
 
-class DashboardEntity extends Equatable {
+class DashboardEntity {
   final int totalStocks;
   final int watchlistCount;
   final StockEntity? topGainer;
   final StockEntity? topLoser;
-  final MarketSummaryEntity marketSummary;
+  final MarketSummaryEntity? marketSummary; // Made nullable
   final List<StockEntity> marketOverview;
   final List<ActivityEntity> recentActivity;
 
   const DashboardEntity({
-    required this.totalStocks,
-    required this.watchlistCount,
+    this.totalStocks = 0,
+    this.watchlistCount = 0,
     this.topGainer,
     this.topLoser,
-    required this.marketSummary,
-    required this.marketOverview,
-    required this.recentActivity,
+    this.marketSummary, // Now accepts null
+    this.marketOverview = const [],
+    this.recentActivity = const [],
   });
 
-  @override
-  List<Object?> get props => [
-        totalStocks,
-        watchlistCount,
-        topGainer,
-        topLoser,
-        marketSummary,
-        marketOverview,
-        recentActivity,
-      ];
+  DashboardEntity copyWith({
+    int? totalStocks,
+    int? watchlistCount,
+    StockEntity? topGainer,
+    StockEntity? topLoser,
+    MarketSummaryEntity? marketSummary,
+    List<StockEntity>? marketOverview,
+    List<ActivityEntity>? recentActivity,
+  }) {
+    return DashboardEntity(
+      totalStocks: totalStocks ?? this.totalStocks,
+      watchlistCount: watchlistCount ?? this.watchlistCount,
+      topGainer: topGainer ?? this.topGainer,
+      topLoser: topLoser ?? this.topLoser,
+      marketSummary: marketSummary ?? this.marketSummary,
+      marketOverview: marketOverview ?? this.marketOverview,
+      recentActivity: recentActivity ?? this.recentActivity,
+    );
+  }
 }
 
-class MarketSummaryEntity extends Equatable {
+class MarketSummaryEntity {
   final double dseIndex;
   final double marketCap;
   final double totalVolume;
@@ -79,18 +120,31 @@ class MarketSummaryEntity extends Equatable {
   final int losers;
 
   const MarketSummaryEntity({
-    required this.dseIndex,
-    required this.marketCap,
-    required this.totalVolume,
-    required this.gainers,
-    required this.losers,
+    this.dseIndex = 0.0,
+    this.marketCap = 0.0,
+    this.totalVolume = 0.0,
+    this.gainers = 0,
+    this.losers = 0,
   });
 
-  @override
-  List<Object?> get props => [dseIndex, marketCap, totalVolume, gainers, losers];
+  MarketSummaryEntity copyWith({
+    double? dseIndex,
+    double? marketCap,
+    double? totalVolume,
+    int? gainers,
+    int? losers,
+  }) {
+    return MarketSummaryEntity(
+      dseIndex: dseIndex ?? this.dseIndex,
+      marketCap: marketCap ?? this.marketCap,
+      totalVolume: totalVolume ?? this.totalVolume,
+      gainers: gainers ?? this.gainers,
+      losers: losers ?? this.losers,
+    );
+  }
 }
 
-class ActivityEntity extends Equatable {
+class ActivityEntity {
   final String type;
   final String message;
   final DateTime timestamp;
@@ -103,83 +157,27 @@ class ActivityEntity extends Equatable {
     this.stockSymbol,
   });
 
-  @override
-  List<Object?> get props => [type, message, timestamp, stockSymbol];
+  ActivityEntity copyWith({
+    String? type,
+    String? message,
+    DateTime? timestamp,
+    String? stockSymbol,
+  }) {
+    return ActivityEntity(
+      type: type ?? this.type,
+      message: message ?? this.message,
+      timestamp: timestamp ?? this.timestamp,
+      stockSymbol: stockSymbol ?? this.stockSymbol,
+    );
+  }
 }
 
-class StockDetailsEntity extends Equatable {
-  final StockEntity stock;
-  final Map<String, dynamic> metrics;
-  final List<PricePoint> priceHistory;
-  final String? description;
-  final String? ceo;
-  final int? employees;
-
-  const StockDetailsEntity({
-    required this.stock,
-    required this.metrics,
-    required this.priceHistory,
-    this.description,
-    this.ceo,
-    this.employees,
-  });
-
-  @override
-  List<Object?> get props => [stock, metrics, priceHistory, description, ceo, employees];
-}
-
-class PricePoint extends Equatable {
-  final DateTime date;
-  final double price;
-  final double volume;
-
-  const PricePoint({
-    required this.date,
-    required this.price,
-    required this.volume,
-  });
-
-  @override
-  List<Object?> get props => [date, price, volume];
-}
-
-class ComparisonEntity extends Equatable {
-  final List<StockEntity> stocks;
-  final Map<String, dynamic> metrics;
-  final String? recommendation;
-  final String? bestOverall;
-  final String? bestValue;
-  final String? bestGrowth;
-  final String? safestPick;
-
-  const ComparisonEntity({
-    required this.stocks,
-    required this.metrics,
-    this.recommendation,
-    this.bestOverall,
-    this.bestValue,
-    this.bestGrowth,
-    this.safestPick,
-  });
-
-  @override
-  List<Object?> get props => [
-        stocks,
-        metrics,
-        recommendation,
-        bestOverall,
-        bestValue,
-        bestGrowth,
-        safestPick,
-      ];
-}
-
-class AnalysisEntity extends Equatable {
+class AnalysisEntity {
   final StockEntity stock;
   final String recommendation;
   final int score;
-  final ValuationEntity valuation;
-  final PredictionEntity prediction;
+  final ValuationEntity? valuation; // Made nullable
+  final PredictionEntity? prediction; // Made nullable
   final Map<String, dynamic> financialMetrics;
   final List<SignalEntity> positiveSignals;
   final List<SignalEntity> warningSignals;
@@ -187,28 +185,44 @@ class AnalysisEntity extends Equatable {
   const AnalysisEntity({
     required this.stock,
     required this.recommendation,
-    required this.score,
-    required this.valuation,
-    required this.prediction,
-    required this.financialMetrics,
-    required this.positiveSignals,
-    required this.warningSignals,
+    this.score = 0,
+    this.valuation, // Now accepts null
+    this.prediction, // Now accepts null
+    this.financialMetrics = const {},
+    this.positiveSignals = const [],
+    this.warningSignals = const [],
   });
 
-  @override
-  List<Object?> get props => [
-        stock,
-        recommendation,
-        score,
-        valuation,
-        prediction,
-        financialMetrics,
-        positiveSignals,
-        warningSignals,
-      ];
+  AnalysisEntity copyWith({
+    StockEntity? stock,
+    String? recommendation,
+    int? score,
+    ValuationEntity? valuation,
+    PredictionEntity? prediction,
+    Map<String, dynamic>? financialMetrics,
+    List<SignalEntity>? positiveSignals,
+    List<SignalEntity>? warningSignals,
+  }) {
+    return AnalysisEntity(
+      stock: stock ?? this.stock,
+      recommendation: recommendation ?? this.recommendation,
+      score: score ?? this.score,
+      valuation: valuation ?? this.valuation,
+      prediction: prediction ?? this.prediction,
+      financialMetrics: financialMetrics ?? this.financialMetrics,
+      positiveSignals: positiveSignals ?? this.positiveSignals,
+      warningSignals: warningSignals ?? this.warningSignals,
+    );
+  }
+
+  // Helper getters
+  bool get isStrongBuy => recommendation.toLowerCase() == 'strong buy';
+  bool get isBuy => recommendation.toLowerCase() == 'buy';
+  bool get isHold => recommendation.toLowerCase() == 'hold';
+  bool get isSell => recommendation.toLowerCase() == 'sell';
 }
 
-class ValuationEntity extends Equatable {
+class ValuationEntity {
   final String status;
   final double marketPrice;
   final double bookValue;
@@ -218,25 +232,38 @@ class ValuationEntity extends Equatable {
 
   const ValuationEntity({
     required this.status,
-    required this.marketPrice,
-    required this.bookValue,
-    required this.grahamNumber,
-    required this.intrinsicValue,
-    required this.marginOfSafety,
+    this.marketPrice = 0.0,
+    this.bookValue = 0.0,
+    this.grahamNumber = 0.0,
+    this.intrinsicValue = 0.0,
+    this.marginOfSafety = 0.0,
   });
 
-  @override
-  List<Object?> get props => [
-        status,
-        marketPrice,
-        bookValue,
-        grahamNumber,
-        intrinsicValue,
-        marginOfSafety,
-      ];
+  ValuationEntity copyWith({
+    String? status,
+    double? marketPrice,
+    double? bookValue,
+    double? grahamNumber,
+    double? intrinsicValue,
+    double? marginOfSafety,
+  }) {
+    return ValuationEntity(
+      status: status ?? this.status,
+      marketPrice: marketPrice ?? this.marketPrice,
+      bookValue: bookValue ?? this.bookValue,
+      grahamNumber: grahamNumber ?? this.grahamNumber,
+      intrinsicValue: intrinsicValue ?? this.intrinsicValue,
+      marginOfSafety: marginOfSafety ?? this.marginOfSafety,
+    );
+  }
+
+  // Helper getters
+  bool get isUndervalued => status.toLowerCase() == 'undervalued';
+  bool get isOvervalued => status.toLowerCase() == 'overvalued';
+  bool get isFairlyValued => status.toLowerCase() == 'fairly valued';
 }
 
-class PredictionEntity extends Equatable {
+class PredictionEntity {
   final double expectedPrice;
   final double conservativePrice;
   final double optimisticPrice;
@@ -244,27 +271,39 @@ class PredictionEntity extends Equatable {
   final String confidence;
 
   const PredictionEntity({
-    required this.expectedPrice,
-    required this.conservativePrice,
-    required this.optimisticPrice,
-    required this.expectedChange,
-    required this.confidence,
+    this.expectedPrice = 0.0,
+    this.conservativePrice = 0.0,
+    this.optimisticPrice = 0.0,
+    this.expectedChange = 0.0,
+    this.confidence = 'Low',
   });
 
-  @override
-  List<Object?> get props => [
-        expectedPrice,
-        conservativePrice,
-        optimisticPrice,
-        expectedChange,
-        confidence,
-      ];
+  PredictionEntity copyWith({
+    double? expectedPrice,
+    double? conservativePrice,
+    double? optimisticPrice,
+    double? expectedChange,
+    String? confidence,
+  }) {
+    return PredictionEntity(
+      expectedPrice: expectedPrice ?? this.expectedPrice,
+      conservativePrice: conservativePrice ?? this.conservativePrice,
+      optimisticPrice: optimisticPrice ?? this.optimisticPrice,
+      expectedChange: expectedChange ?? this.expectedChange,
+      confidence: confidence ?? this.confidence,
+    );
+  }
+
+  // Helper getters
+  bool get isHighConfidence => confidence.toLowerCase() == 'high';
+  bool get isMediumConfidence => confidence.toLowerCase() == 'medium';
+  bool get isLowConfidence => confidence.toLowerCase() == 'low';
 }
 
-class SignalEntity extends Equatable {
+class SignalEntity {
   final String title;
   final String description;
-  final String type; // 'positive' or 'warning'
+  final String type;
 
   const SignalEntity({
     required this.title,
@@ -272,6 +311,100 @@ class SignalEntity extends Equatable {
     required this.type,
   });
 
-  @override
-  List<Object?> get props => [title, description, type];
+  SignalEntity copyWith({String? title, String? description, String? type}) {
+    return SignalEntity(
+      title: title ?? this.title,
+      description: description ?? this.description,
+      type: type ?? this.type,
+    );
+  }
+
+  // Helper getters
+  bool get isPositive => type.toLowerCase() == 'positive';
+  bool get isWarning => type.toLowerCase() == 'warning';
+  bool get isNegative => type.toLowerCase() == 'negative';
+}
+
+class ComparisonEntity {
+  final List<StockEntity> stocks;
+  final Map<String, dynamic> comparison;
+  final String period;
+
+  const ComparisonEntity({
+    this.stocks = const [],
+    this.comparison = const {},
+    this.period = '1M',
+  });
+
+  ComparisonEntity copyWith({
+    List<StockEntity>? stocks,
+    Map<String, dynamic>? comparison,
+    String? period,
+  }) {
+    return ComparisonEntity(
+      stocks: stocks ?? this.stocks,
+      comparison: comparison ?? this.comparison,
+      period: period ?? this.period,
+    );
+  }
+}
+
+class StockDetailsEntity {
+  final StockEntity stock;
+  final List<PriceHistoryEntity> priceHistory;
+  final Map<String, dynamic> financialData;
+
+  const StockDetailsEntity({
+    required this.stock,
+    this.priceHistory = const [],
+    this.financialData = const {},
+  });
+
+  StockDetailsEntity copyWith({
+    StockEntity? stock,
+    List<PriceHistoryEntity>? priceHistory,
+    Map<String, dynamic>? financialData,
+  }) {
+    return StockDetailsEntity(
+      stock: stock ?? this.stock,
+      priceHistory: priceHistory ?? this.priceHistory,
+      financialData: financialData ?? this.financialData,
+    );
+  }
+}
+
+class PriceHistoryEntity {
+  final DateTime date;
+  final double open;
+  final double high;
+  final double low;
+  final double close;
+  final double volume;
+
+  const PriceHistoryEntity({
+    required this.date,
+    this.open = 0.0,
+    this.high = 0.0,
+    this.low = 0.0,
+    this.close = 0.0,
+    this.volume = 0.0,
+  });
+
+  PriceHistoryEntity copyWith({
+    DateTime? date,
+    double? open,
+    double? high,
+    double? low,
+    double? close,
+    double? volume,
+  }) {
+    return PriceHistoryEntity(
+      date: date ?? this.date,
+      open: open ?? this.open,
+      high: high ?? this.high,
+      low: low ?? this.low,
+      close: close ?? this.close,
+      volume: volume ?? this.volume,
+    );
+  }
 }

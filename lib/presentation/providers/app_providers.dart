@@ -1,7 +1,8 @@
+// lib/presentation/providers/app_providers.dart
 
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import '../../core/config/dio_client.dart';  // Import DioClient from here
 import '../../data/sources/remote/stock_api_service.dart';
 import '../../data/sources/local/local_storage.dart';
 import '../../data/repositories/stock_repository_impl.dart';
@@ -14,14 +15,12 @@ final localStorageProvider = FutureProvider<LocalStorage>((ref) async {
   return await LocalStorageProvider.create();
 });
 
-// Dio Provider
-final dioProvider = Provider<Dio>((ref) {
-  return DioClient.createDio();
-});
+// NOTE: dioProvider is already defined in dio_client.dart
+// We re-export it here or just use it directly
 
-// API Service Provider
+// API Service Provider - Uses the dio from dioClientProvider
 final apiServiceProvider = Provider<StockApiService>((ref) {
-  final dio = ref.watch(dioProvider);
+  final dio = ref.watch(dioProvider);  // This comes from dio_client.dart
   return StockApiService(dio);
 });
 
@@ -45,7 +44,7 @@ final getStockDetailsProvider = Provider<GetStockDetails>((ref) {
   return GetStockDetails(ref.watch(stockRepositoryProvider));
 });
 
-final compareStocksProvider = Provider<CompareStocks>((ref) {
+final compareStocksUseCaseProvider = Provider<CompareStocks>((ref) {
   return CompareStocks(ref.watch(stockRepositoryProvider));
 });
 
@@ -98,7 +97,7 @@ final comparisonProvider = FutureProvider.family<ComparisonEntity, Map<String, d
   ref,
   params,
 ) async {
-  final compareStocks = ref.watch(compareStocksProvider);
+  final compareStocks = ref.watch(compareStocksUseCaseProvider);
   final result = await compareStocks(
     params['symbols'] as List<String>,
     params['period'] as String,

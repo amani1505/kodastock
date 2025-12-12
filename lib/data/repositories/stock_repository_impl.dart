@@ -22,13 +22,16 @@ class StockRepositoryImpl implements StockRepository {
         return Right(model.toEntity());
       }
 
-      // Fetch from API
+      // Fetch from API - now returns DashboardResponse
       final response = await _apiService.getDashboard();
       
-      // Save to cache
-      await _localStorage.saveCache('dashboard', response.toJson());
-      
-      return Right(response.toEntity());
+      if (response.data != null) {
+        // Save to cache
+        await _localStorage.saveCache('dashboard', response.data!.toJson());
+        return Right(response.data!.toEntity());
+      } else {
+        return Left(response.message ?? 'Failed to load dashboard');
+      }
     } on DioException catch (e) {
       return Left(_handleDioError(e));
     } catch (e) {
@@ -53,23 +56,29 @@ class StockRepositoryImpl implements StockRepository {
         return Right(items);
       }
 
-      // Fetch from API
+      // Fetch from API - now returns StocksListResponse
       final response = await _apiService.getStocksList(
         sector: sector,
         page: page,
         limit: limit,
       );
 
+      // Extract stocks from the wrapper
+      final stocks = response.stocks;
+
       // Save to cache
       await _localStorage.saveCache(
         cacheKey,
-        {'items': response.map((s) => s.toJson()).toList()},
+        {'items': stocks.map((s) => s.toJson()).toList()},
       );
 
-      return Right(response.map((s) => s.toEntity()).toList());
+      return Right(stocks.map((s) => s.toEntity()).toList());
     } on DioException catch (e) {
       return Left(_handleDioError(e));
-    } catch (e) {
+    } catch (e, stack) {
+      // Add stack trace for debugging
+      print('Error in getStocksList: $e');
+      print('Stack trace: $stack');
       return Left('An unexpected error occurred: ${e.toString()}');
     }
   }
@@ -79,14 +88,11 @@ class StockRepositoryImpl implements StockRepository {
     try {
       final response = await _apiService.getStockDetails(symbol);
       
-      // Create a mock details entity (in real app, you'd have a proper endpoint)
-      final entity = StockDetailsEntity(
-        stock: response.toEntity(),
-        metrics: {},
-        priceHistory: [],
-      );
-      
-      return Right(entity);
+      if (response.data != null) {
+        return Right(response.data!.toEntity());
+      } else {
+        return Left(response.message ?? 'Failed to load stock details');
+      }
     } on DioException catch (e) {
       return Left(_handleDioError(e));
     } catch (e) {
@@ -105,23 +111,19 @@ class StockRepositoryImpl implements StockRepository {
         'period': period,
       });
 
-      // Parse the comparison response
-      final data = response.data;
-      final stocks = (data['stocks'] as List? ?? [])
-          .map((json) => StockModel.fromJson(json).toEntity())
-          .toList();
+      if (response.data != null) {
+        final data = response.data!;
+        
+        final entity = ComparisonEntity(
+          stocks: data.stocks.map((s) => s.toEntity()).toList(),
+          comparison: data.comparison ?? {},
+          period: data.period ?? period,
+        );
 
-      final entity = ComparisonEntity(
-        stocks: stocks,
-        metrics: data['metrics'] ?? {},
-        recommendation: data['recommendation'],
-        bestOverall: data['best_overall'],
-        bestValue: data['best_value'],
-        bestGrowth: data['best_growth'],
-        safestPick: data['safest_pick'],
-      );
-
-      return Right(entity);
+        return Right(entity);
+      } else {
+        return Left(response.message ?? 'Failed to compare stocks');
+      }
     } on DioException catch (e) {
       return Left(_handleDioError(e));
     } catch (e) {
@@ -136,7 +138,12 @@ class StockRepositoryImpl implements StockRepository {
   ) async {
     try {
       final response = await _apiService.getStockAnalysis(symbol, period);
-      return Right(response.toEntity());
+      
+      if (response.data != null) {
+        return Right(response.data!.toEntity());
+      } else {
+        return Left(response.message ?? 'Failed to load analysis');
+      }
     } on DioException catch (e) {
       return Left(_handleDioError(e));
     } catch (e) {
@@ -148,7 +155,12 @@ class StockRepositoryImpl implements StockRepository {
   Future<Either<String, MarketSummaryEntity>> getMarketSummary() async {
     try {
       final response = await _apiService.getMarketSummary();
-      return Right(response.toEntity());
+      
+      if (response.data != null) {
+        return Right(response.data!.toEntity());
+      } else {
+        return Left(response.message ?? 'Failed to load market summary');
+      }
     } on DioException catch (e) {
       return Left(_handleDioError(e));
     } catch (e) {

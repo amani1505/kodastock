@@ -239,10 +239,12 @@ class _StocksScreenState extends ConsumerState<StocksScreen> {
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildDetailRow(context, 'Current Price', '${stock.currentPrice} TZS'),
-          _buildDetailRow(context, 'Change', '${stock.changePercent}%'),
-          _buildDetailRow(context, 'Volume', '${stock.volume}'),
-          _buildDetailRow(context, 'Market Cap', stock.marketCap?.toString() ?? 'N/A'),
+          _buildDetailRow(context, 'Current Price', '${stock.currentPrice.toStringAsFixed(2)} TZS'),
+          _buildDetailRow(context, 'Change', '${stock.changePercent.toStringAsFixed(2)}%'),
+          _buildDetailRow(context, 'Volume', '${stock.volume.toStringAsFixed(0)}'),
+          _buildDetailRow(context, 'Market Cap', stock.marketCap != null 
+              ? '${stock.marketCap!.toStringAsFixed(0)} TZS' 
+              : 'N/A'),
           if (stock.sector != null)
             _buildDetailRow(context, 'Sector', stock.sector!),
           const SizedBox(height: 16),

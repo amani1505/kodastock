@@ -13,7 +13,7 @@ class _StockApiService implements StockApiService {
     this._dio, {
     this.baseUrl,
   }) {
-    baseUrl ??= 'https://api.kodastock.com/v1';
+    baseUrl ??= 'https://stocklens.benethemmanuel.site/api';
   }
 
   final Dio _dio;
@@ -21,13 +21,13 @@ class _StockApiService implements StockApiService {
   String? baseUrl;
 
   @override
-  Future<DashboardModel> getDashboard() async {
+  Future<DashboardResponse> getDashboard() async {
     const _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     final Map<String, dynamic>? _data = null;
     final _result = await _dio
-        .fetch<Map<String, dynamic>>(_setStreamType<DashboardModel>(Options(
+        .fetch<Map<String, dynamic>>(_setStreamType<DashboardResponse>(Options(
       method: 'GET',
       headers: _headers,
       extra: _extra,
@@ -43,12 +43,12 @@ class _StockApiService implements StockApiService {
               _dio.options.baseUrl,
               baseUrl,
             ))));
-    final value = DashboardModel.fromJson(_result.data!);
+    final value = DashboardResponse.fromJson(_result.data!);
     return value;
   }
 
   @override
-  Future<List<StockModel>> getStocksList({
+  Future<StocksListResponse> getStocksList({
     String? sector,
     int? page,
     int? limit,
@@ -63,14 +63,14 @@ class _StockApiService implements StockApiService {
     final _headers = <String, dynamic>{};
     final Map<String, dynamic>? _data = null;
     final _result = await _dio
-        .fetch<List<dynamic>>(_setStreamType<List<StockModel>>(Options(
+        .fetch<Map<String, dynamic>>(_setStreamType<StocksListResponse>(Options(
       method: 'GET',
       headers: _headers,
       extra: _extra,
     )
             .compose(
               _dio.options,
-              '/stocks/list',
+              '/stocks',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -79,20 +79,18 @@ class _StockApiService implements StockApiService {
               _dio.options.baseUrl,
               baseUrl,
             ))));
-    var value = _result.data!
-        .map((dynamic i) => StockModel.fromJson(i as Map<String, dynamic>))
-        .toList();
+    final value = StocksListResponse.fromJson(_result.data!);
     return value;
   }
 
   @override
-  Future<StockModel> getStockDetails(String symbol) async {
+  Future<StockDetailsResponse> getStockDetails(String symbol) async {
     const _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     final Map<String, dynamic>? _data = null;
-    final _result = await _dio
-        .fetch<Map<String, dynamic>>(_setStreamType<StockModel>(Options(
+    final _result = await _dio.fetch<Map<String, dynamic>>(
+        _setStreamType<StockDetailsResponse>(Options(
       method: 'GET',
       headers: _headers,
       extra: _extra,
@@ -108,7 +106,7 @@ class _StockApiService implements StockApiService {
               _dio.options.baseUrl,
               baseUrl,
             ))));
-    final value = StockModel.fromJson(_result.data!);
+    final value = StockDetailsResponse.fromJson(_result.data!);
     return value;
   }
 
@@ -141,7 +139,7 @@ class _StockApiService implements StockApiService {
   }
 
   @override
-  Future<AnalysisModel> getStockAnalysis(
+  Future<AnalysisResponse> getStockAnalysis(
     String symbol,
     String? period,
   ) async {
@@ -151,7 +149,7 @@ class _StockApiService implements StockApiService {
     final _headers = <String, dynamic>{};
     final Map<String, dynamic>? _data = null;
     final _result = await _dio
-        .fetch<Map<String, dynamic>>(_setStreamType<AnalysisModel>(Options(
+        .fetch<Map<String, dynamic>>(_setStreamType<AnalysisResponse>(Options(
       method: 'GET',
       headers: _headers,
       extra: _extra,
@@ -167,18 +165,18 @@ class _StockApiService implements StockApiService {
               _dio.options.baseUrl,
               baseUrl,
             ))));
-    final value = AnalysisModel.fromJson(_result.data!);
+    final value = AnalysisResponse.fromJson(_result.data!);
     return value;
   }
 
   @override
-  Future<MarketSummaryModel> getMarketSummary() async {
+  Future<MarketSummaryResponse> getMarketSummary() async {
     const _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     final Map<String, dynamic>? _data = null;
-    final _result = await _dio
-        .fetch<Map<String, dynamic>>(_setStreamType<MarketSummaryModel>(Options(
+    final _result = await _dio.fetch<Map<String, dynamic>>(
+        _setStreamType<MarketSummaryResponse>(Options(
       method: 'GET',
       headers: _headers,
       extra: _extra,
@@ -194,7 +192,7 @@ class _StockApiService implements StockApiService {
               _dio.options.baseUrl,
               baseUrl,
             ))));
-    final value = MarketSummaryModel.fromJson(_result.data!);
+    final value = MarketSummaryResponse.fromJson(_result.data!);
     return value;
   }
 

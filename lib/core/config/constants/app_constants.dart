@@ -1,6 +1,6 @@
 class AppConstants {
   // API Configuration
-  static const String baseUrl = 'https://api.kodastock.com/v1';
+  static const String baseUrl = 'https://stocklens.benethemmanuel.site/api';
   static const Duration connectionTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);
 
@@ -9,6 +9,13 @@ class AppConstants {
   static const String themeMode = 'theme_mode';
   static const String watchlistKey = 'user_watchlist';
   static const String lastSyncKey = 'last_sync_time';
+
+
+    // Auth Storage Keys
+  static const String accessTokenKey = 'access_token';
+  static const String refreshTokenKey = 'refresh_token';
+  static const String userDataKey = 'user_data';
+  static const String isLoggedInKey = 'is_logged_in';
 
   // App Info
   static const String appName = 'KodaStock';
@@ -22,8 +29,19 @@ class AppConstants {
 }
 
 class ApiEndpoints {
+  // Auth Endpoints
+  static const String login = '/login';
+  static const String register = '/register';
+  static const String logout = '/logout';
+  static const String refreshToken = '/auth/refresh';
+  static const String profile = '/profile';
+  static const String forgotPassword = '/auth/forgot-password';
+  static const String resetPassword = '/auth/reset-password';
+  
+
+
   static const String dashboard = '/dashboard';
-  static const String stocksList = '/stocks/list';
+  static const String stocksList = '/stocks';
   static String stockDetails(String symbol) => '/stocks/$symbol';
   static const String compare = '/stocks/compare';
   static String analysis(String symbol) => '/analysis/$symbol';
@@ -31,6 +49,22 @@ class ApiEndpoints {
 }
 
 class AppStrings {
+
+  // Auth Messages
+  static const String login = 'Login';
+  static const String signUp = 'Sign Up';
+  static const String email = 'Email';
+  static const String password = 'Password';
+  static const String confirmPassword = 'Confirm Password';
+  static const String fullName = 'Full Name';
+  static const String forgotPassword = 'Forgot Password?';
+  static const String dontHaveAccount = "Don't have an account? ";
+  static const String alreadyHaveAccount = 'Already have an account? ';
+  static const String loginSuccess = 'Login successful!';
+  static const String signupSuccess = 'Account created successfully!';
+  static const String logoutSuccess = 'Logged out successfully';
+
+
   // Welcome Messages
   static const String welcomeBack = 'Welcome back';
   static const String investmentMessage = "Here's what's happening with your investments today.";
@@ -51,6 +85,14 @@ class AppStrings {
   static const String errorGeneric = 'Something went wrong. Please try again.';
   static const String errorNetwork = 'Network error. Please check your connection.';
   static const String errorLoadingData = 'Failed to load data.';
+  static const String errorInvalidCredentials = 'Invalid email or password.';
+  static const String errorEmailRequired = 'Email is required';
+  static const String errorEmailInvalid = 'Please enter a valid email';
+  static const String errorPasswordRequired = 'Password is required';
+  static const String errorPasswordTooShort = 'Password must be at least 6 characters';
+  static const String errorPasswordMismatch = 'Passwords do not match';
+  static const String errorNameRequired = 'Name is required';
+  static const String errorUnauthorized = 'Session expired. Please login again.';
 }
 
 class AppColors {
