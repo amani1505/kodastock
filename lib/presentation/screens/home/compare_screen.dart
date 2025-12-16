@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 import '../../../core/utils/extensions.dart';
+import '../../../core/config/dio_client.dart';
+import '../../../core/config/constants/app_constants.dart';
+import '../../providers/app_providers.dart';
 
 class CompareScreen extends ConsumerStatefulWidget {
   const CompareScreen({Key? key}) : super(key: key);
@@ -13,26 +17,19 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
   String? stock1;
   String? stock2;
   String? stock3;
-  String period = '1 Month';
+  int period = 30; // Default to 30 days
   late TabController _tabController;
   bool _showResults = false;
+  bool _isComparing = false;
+  dynamic _comparisonData;
 
-  final List<String> availableStocks = [
-    'AFRIPRISE',
-    'CRDB',
-    'DCB',
-    'DSE',
-    'EABL',
-    'JATU',
-  ];
-
-  final List<String> periods = [
-    '1 Week',
-    '1 Month',
-    '3 Months',
-    '6 Months',
-    '1 Year',
-  ];
+  final Map<String, int> periods = {
+    '1 Week': 7,
+    '1 Month': 30,
+    '3 Months': 90,
+    '6 Months': 180,
+    '1 Year': 365,
+  };
 
   @override
   void initState() {
@@ -148,13 +145,7 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
     Function(String?) onChanged, {
     List<String?>? excludeStocks,
   }) {
-    // Filter out already selected stocks from other dropdowns
-    final filteredStocks = availableStocks.where((stock) {
-      return excludeStocks == null || !excludeStocks.contains(stock);
-    }).toList();
-
-    // Ensure the current value is valid for this dropdown
-    final validValue = (value != null && filteredStocks.contains(value)) ? value : null;
+    final stocksAsync = ref.watch(stocksListProvider(null));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -166,22 +157,54 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
           ),
         ),
         const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          key: ValueKey('$label-${excludeStocks?.join(',') ?? ''}'),
-          value: validValue,
-          decoration: InputDecoration(
-            hintText: 'Select a stock',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          items: filteredStocks.map((stock) {
-            return DropdownMenuItem(
-              value: stock,
-              child: Text('$stock - $stock'),
+        stocksAsync.when(
+          data: (stocks) {
+            // Filter out already selected stocks from other dropdowns
+            final filteredStocks = stocks.where((stock) {
+              return excludeStocks == null || !excludeStocks.contains(stock.symbol);
+            }).toList();
+
+            // Ensure the current value is valid for this dropdown
+            final validValue = (value != null && filteredStocks.any((s) => s.symbol == value)) ? value : null;
+
+            return DropdownButtonFormField<String>(
+              key: ValueKey('$label-${excludeStocks?.join(',') ?? ''}'),
+              initialValue: validValue,
+              decoration: InputDecoration(
+                hintText: 'Select a stock',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              items: filteredStocks.map((stock) {
+                return DropdownMenuItem(
+                  value: stock.symbol,
+                  child: Text('${stock.symbol} - ${stock.name}'),
+                );
+              }).toList(),
+              onChanged: onChanged,
             );
-          }).toList(),
-          onChanged: onChanged,
+          },
+          loading: () => DropdownButtonFormField<String>(
+            decoration: InputDecoration(
+              hintText: 'Loading stocks...',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            items: const [],
+            onChanged: null,
+          ),
+          error: (error, _) => DropdownButtonFormField<String>(
+            decoration: InputDecoration(
+              hintText: 'Error loading stocks',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            items: const [],
+            onChanged: null,
+          ),
         ),
       ],
     );
@@ -198,17 +221,17 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
           ),
         ),
         const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
+        DropdownButtonFormField<int>(
           initialValue: period,
           decoration: InputDecoration(
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
             ),
           ),
-          items: periods.map((p) {
+          items: periods.entries.map((entry) {
             return DropdownMenuItem(
-              value: p,
-              child: Text(p),
+              value: entry.value,
+              child: Text(entry.key),
             );
           }).toList(),
           onChanged: (value) {
@@ -220,34 +243,71 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
   }
 
   Widget _buildCompareButton(BuildContext context) {
-    final isEnabled = stock1 != null && stock2 != null;
+    final isEnabled = stock1 != null && stock2 != null && !_isComparing;
 
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: isEnabled
-            ? () {
-                setState(() {
-                  _showResults = true;
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Comparing stocks...')),
-                );
-              }
-            : null,
+        onPressed: isEnabled ? _handleCompareStocks : null,
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 16),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.compare_arrows),
-            const SizedBox(width: 8),
-            const Text('Compare Stocks'),
-          ],
-        ),
+        child: _isComparing
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.compare_arrows),
+                  const SizedBox(width: 8),
+                  const Text('Compare Stocks'),
+                ],
+              ),
       ),
     );
+  }
+
+  Future<void> _handleCompareStocks() async {
+    setState(() {
+      _isComparing = true;
+      _showResults = false;
+    });
+
+    try {
+      final dio = ref.read(dioProvider);
+      final symbols = [stock1!, stock2!, if (stock3 != null) stock3!];
+
+      final response = await dio.post(
+        ApiEndpoints.compare,
+        data: {
+          'symbols': symbols,
+          'period': period,
+        },
+      );
+
+      if (mounted) {
+        setState(() {
+          _comparisonData = response.data['data'];
+          _showResults = true;
+          _isComparing = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isComparing = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to compare stocks: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildComparisonResults(BuildContext context) {
@@ -372,34 +432,89 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
   }
 
   Widget _buildResultBadges(BuildContext context) {
+    if (_comparisonData == null) return const SizedBox.shrink();
+
+    final bestPicks = _comparisonData['best_picks'];
+    if (bestPicks == null) return const SizedBox.shrink();
+
     return Wrap(
       spacing: 12,
       runSpacing: 12,
       children: [
-        _buildBadge(context, 'BEST OVERALL', 'CRDB', Colors.amber, Icons.emoji_events),
-        _buildBadge(context, 'BEST VALUE', 'CRDB', Colors.blue, Icons.diamond),
-        _buildBadge(context, 'BEST GROWTH', 'CRDB', Colors.purple, Icons.rocket_launch),
-        _buildBadge(context, 'SAFEST PICK', 'CRDB', Colors.green, Icons.shield),
+        if (bestPicks['best_overall'] != null)
+          _buildBadge(
+            context,
+            'BEST OVERALL',
+            bestPicks['best_overall']['symbol'] ?? '',
+            Colors.amber,
+            Icons.emoji_events,
+          ),
+        if (bestPicks['best_value'] != null)
+          _buildBadge(
+            context,
+            'BEST VALUE',
+            bestPicks['best_value']['symbol'] ?? '',
+            Colors.blue,
+            Icons.diamond,
+          ),
+        if (bestPicks['best_growth'] != null)
+          _buildBadge(
+            context,
+            'BEST GROWTH',
+            bestPicks['best_growth']['symbol'] ?? '',
+            Colors.purple,
+            Icons.rocket_launch,
+          ),
+        if (bestPicks['safest_pick'] != null)
+          _buildBadge(
+            context,
+            'SAFEST PICK',
+            bestPicks['safest_pick']['symbol'] ?? '',
+            Colors.green,
+            Icons.shield,
+          ),
       ],
     );
   }
 
   Widget _buildStockCards(BuildContext context) {
-    final stocks = [
-      if (stock1 != null) stock1!,
-      if (stock2 != null) stock2!,
-      if (stock3 != null) stock3!,
-    ];
+    if (_comparisonData == null) return const SizedBox.shrink();
 
-    final stockData = {
-      'CRDB': {'overall': 36, 'technical': 0, 'fundamental': 36, 'status': 'Caution', 'statusColor': Colors.orange, 'note': 'Significant concerns identified. 2 negative indicators suggest caution.'},
-      'DSE': {'overall': 0, 'technical': 0, 'fundamental': 0, 'status': 'Avoid', 'statusColor': Colors.red, 'note': 'High risk with 1 concerning factors. Better opportunities likely exist elsewhere.'},
-      'AFRIPRISE': {'overall': 0, 'technical': 0, 'fundamental': 0, 'status': 'Avoid', 'statusColor': Colors.red, 'note': 'High risk with 2 concerning factors. Better opportunities likely exist elsewhere.'},
-    };
+    final stocksList = _comparisonData['stocks'] as List<dynamic>?;
+    if (stocksList == null || stocksList.isEmpty) return const SizedBox.shrink();
 
     return Row(
-      children: stocks.map((stock) {
-        final data = stockData[stock] ?? {'overall': 0, 'technical': 0, 'fundamental': 0, 'status': 'N/A', 'statusColor': Colors.grey, 'note': 'No data available'};
+      children: stocksList.map<Widget>((stockData) {
+        final stock = stockData['stock'];
+        final symbol = stock['symbol'] ?? '';
+        final name = stock['name'] ?? '';
+        final recommendation = stockData['recommendation'];
+        final action = recommendation['action'] ?? 'N/A';
+        final score = recommendation['score'] ?? 0;
+        final breakdown = recommendation['breakdown'];
+        final technicalScore = breakdown?['technical_score'] ?? 0;
+        final fundamentalScore = breakdown?['fundamental_score'] ?? 0;
+        final summary = recommendation['summary'] ?? 'No data available';
+
+        // Determine status color based on action
+        Color statusColor;
+        switch (action.toLowerCase()) {
+          case 'buy':
+          case 'strong buy':
+            statusColor = Colors.green;
+            break;
+          case 'hold':
+          case 'caution':
+            statusColor = Colors.orange;
+            break;
+          case 'sell':
+          case 'avoid':
+            statusColor = Colors.red;
+            break;
+          default:
+            statusColor = Colors.grey;
+        }
+
         return Expanded(
           child: Card(
             margin: const EdgeInsets.symmetric(horizontal: 8),
@@ -415,13 +530,13 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            stock,
+                            symbol,
                             style: context.textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           Text(
-                            stock,
+                            name,
                             style: context.textTheme.bodySmall?.copyWith(
                               color: Colors.grey,
                             ),
@@ -435,27 +550,27 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: (data['statusColor'] as Color).withValues(alpha: 0.1),
+                      color: statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      data['status'] as String,
+                      action,
                       style: TextStyle(
-                        color: data['statusColor'] as Color,
+                        color: statusColor,
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
                       ),
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _buildScoreRow(context, 'Overall Score', data['overall'] as int, 100),
+                  _buildScoreRow(context, 'Overall Score', score, 100),
                   const SizedBox(height: 8),
-                  _buildScoreRow(context, 'Technical', data['technical'] as int, 50),
+                  _buildScoreRow(context, 'Technical', technicalScore, 50),
                   const SizedBox(height: 8),
-                  _buildScoreRow(context, 'Fundamental', data['fundamental'] as int, 50),
+                  _buildScoreRow(context, 'Fundamental', fundamentalScore, 50),
                   const SizedBox(height: 16),
                   Text(
-                    data['note'] as String,
+                    summary,
                     style: context.textTheme.bodySmall?.copyWith(
                       color: Colors.grey[600],
                       fontSize: 11,
@@ -486,6 +601,33 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
   }
 
   Widget _buildKeyMetricsTable(BuildContext context) {
+    if (_comparisonData == null) return const SizedBox.shrink();
+
+    final stocksList = _comparisonData['stocks'] as List<dynamic>?;
+    if (stocksList == null || stocksList.isEmpty) return const SizedBox.shrink();
+
+    // Extract values for each stock
+    final values = stocksList.map((stockData) {
+      final technical = stockData['technical'];
+      final fundamental = stockData['fundamental'];
+
+      final currentPrice = technical?['current_price']?.toString() ?? 'N/A';
+      final periodChange = technical?['period_change'];
+      final changePercent = periodChange?['percent']?.toString() ?? '0';
+      final healthScore = fundamental?['health_score']?.toString() ?? 'N/A';
+      final healthRating = fundamental?['health_rating'] ?? 'Unknown';
+
+      final changeValue = double.tryParse(changePercent) ?? 0;
+      final changeColor = changeValue >= 0 ? Colors.green : Colors.red;
+
+      return {
+        'price': '$currentPrice TZS',
+        'change': '$changePercent%',
+        'changeColor': changeColor,
+        'health': healthScore != 'N/A' ? '$healthScore%\n$healthRating' : 'N/A',
+      };
+    }).toList();
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -500,12 +642,34 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
               ),
             ),
             const SizedBox(height: 20),
-            _buildMetricTableRow(context, 'Current Price', '1,160 TZS', '5,870 TZS', '445 TZS'),
+            _buildMetricTableRow(
+              context,
+              'Current Price',
+              values[0]['price'] as String,
+              values.length > 1 ? values[1]['price'] as String : '',
+              values.length > 2 ? values[2]['price'] as String : '',
+            ),
             const Divider(),
-            _buildMetricTableRow(context, '30-Day Change', '-0.85%', '-9.69%', '-5.32%',
-              valueColors: [Colors.red, Colors.red, Colors.red]),
+            _buildMetricTableRow(
+              context,
+              '$period-Day Change',
+              values[0]['change'] as String,
+              values.length > 1 ? values[1]['change'] as String : '',
+              values.length > 2 ? values[2]['change'] as String : '',
+              valueColors: [
+                values[0]['changeColor'] as Color,
+                if (values.length > 1) values[1]['changeColor'] as Color else null,
+                if (values.length > 2) values[2]['changeColor'] as Color else null,
+              ],
+            ),
             const Divider(),
-            _buildMetricTableRow(context, 'Financial Health', '58%\nFair', 'N/A', 'N/A'),
+            _buildMetricTableRow(
+              context,
+              'Financial Health',
+              values[0]['health'] as String,
+              values.length > 1 ? values[1]['health'] as String : '',
+              values.length > 2 ? values[2]['health'] as String : '',
+            ),
           ],
         ),
       ),

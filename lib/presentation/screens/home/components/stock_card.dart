@@ -7,11 +7,11 @@ class StockCard extends StatelessWidget {
   final StockEntity stock;
   final VoidCallback? onTap;
 
-  const StockCard({
+  const StockCard({                                                                                                                                                                                                                                                                                                                                           
     Key? key,
     required this.stock,
     this.onTap,
-  }) : super(key: key);
+  }) : super(key: key);                                                                                                                                                                                                                                                                                                                                                
 
   @override
   Widget build(BuildContext context) {

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/utils/extensions.dart';
+import '../../../core/config/theme/theme_provider.dart';
 import '../../providers/app_providers.dart';
 import 'components/quick_action_card.dart';
 import 'components/market_overview_item.dart';
@@ -11,6 +13,7 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboardAsync = ref.watch(dashboardProvider);
+    final userAsync = ref.watch(userProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -28,15 +31,54 @@ class DashboardScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: Icon(Icons.notifications_outlined),
-            onPressed: () {},
+            onPressed: () {
+              context.push('/notifications');
+            },
           ),
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: context.colorScheme.primary,
-            child: Text(
-              'BE',
-              style: context.textTheme.labelMedium?.copyWith(
-                color: Colors.white,
+          // Theme toggle button
+          IconButton(
+            icon: Icon(
+              ref.watch(isDarkModeProvider)
+                ? Icons.light_mode_outlined
+                : Icons.dark_mode_outlined
+            ),
+            onPressed: () {
+              ref.read(themeModeProvider.notifier).toggleTheme();
+            },
+          ),
+          // Profile icon - clickable
+          InkWell(
+            onTap: () {
+              context.push('/profile');
+            },
+            borderRadius: BorderRadius.circular(20),
+            child: userAsync.when(
+              data: (user) {
+                // Get initials from user name
+                final nameParts = user.name.split(' ');
+                final initials = nameParts.length > 1
+                    ? '${nameParts[0][0]}${nameParts[1][0]}'
+                    : nameParts[0].substring(0, 2);
+
+                return CircleAvatar(
+                  radius: 16,
+                  backgroundColor: context.colorScheme.primary,
+                  child: Text(
+                    initials.toUpperCase(),
+                    style: context.textTheme.labelMedium?.copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
+                );
+              },
+              loading: () => CircleAvatar(
+                radius: 16,
+                backgroundColor: context.colorScheme.primary,
+              ),
+              error: (_, __) => CircleAvatar(
+                radius: 16,
+                backgroundColor: context.colorScheme.primary,
+                child: Icon(Icons.person, size: 16, color: Colors.white),
               ),
             ),
           ),
@@ -47,6 +89,7 @@ class DashboardScreen extends ConsumerWidget {
         data: (dashboard) => RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(dashboardProvider);
+            ref.invalidate(userProvider);
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -55,7 +98,7 @@ class DashboardScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Welcome Section
-                _buildWelcomeSection(context, dashboard),
+                _buildWelcomeSection(context, ref, dashboard),
                 const SizedBox(height: 24),
 
                 // Stats Cards
@@ -110,14 +153,34 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildWelcomeSection(BuildContext context, dynamic dashboard) {
+  Widget _buildWelcomeSection(BuildContext context, WidgetRef ref, dynamic dashboard) {
+    final userAsync = ref.watch(userProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Welcome back, Beneth! 👋',
-          style: context.textTheme.displaySmall?.copyWith(
-            fontWeight: FontWeight.bold,
+        userAsync.when(
+          data: (user) {
+            // Get first name from full name
+            final firstName = user.name.split(' ').first;
+            return Text(
+              'Welcome back, $firstName! 👋',
+              style: context.textTheme.displaySmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            );
+          },
+          loading: () => Text(
+            'Welcome back! 👋',
+            style: context.textTheme.displaySmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          error: (_, __) => Text(
+            'Welcome back! 👋',
+            style: context.textTheme.displaySmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         const SizedBox(height: 8),
@@ -131,7 +194,7 @@ class DashboardScreen extends ConsumerWidget {
         Row(
           children: [
             Text(
-              'Tuesday, December 09, 2025',
+              _formatDate(DateTime.now()),
               style: context.textTheme.bodyMedium,
             ),
             const SizedBox(width: 12),
@@ -155,6 +218,17 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
+  String _formatDate(DateTime date) {
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const months = ['January', 'February', 'March', 'April', 'May', 'June',
+                    'July', 'August', 'September', 'October', 'November', 'December'];
+
+    final dayName = days[date.weekday - 1];
+    final monthName = months[date.month - 1];
+
+    return '$dayName, $monthName ${date.day}, ${date.year}';
+  }
+
   Widget _buildStatsCards(BuildContext context, dynamic dashboard) {
     return Row(
       children: [
@@ -163,7 +237,7 @@ class DashboardScreen extends ConsumerWidget {
             context,
             icon: Icons.business,
             title: 'Total Stocks',
-            value: '25',
+            value: '${dashboard.totalStocks}',
             subtitle: 'DSE Listed Companies',
             color: Colors.blue,
           ),
@@ -174,7 +248,7 @@ class DashboardScreen extends ConsumerWidget {
             context,
             icon: Icons.bookmark_border,
             title: 'Watchlist',
-            value: '0',
+            value: '${dashboard.watchlistCount}',
             subtitle: 'Stocks Tracking',
             color: Colors.purple,
           ),
@@ -289,6 +363,8 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildMarketSummary(BuildContext context, dynamic dashboard) {
+    final marketSummary = dashboard.marketSummary;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -302,11 +378,29 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
-            _buildSummaryRow(context, 'DSE Index', '1,842.56'),
+            _buildSummaryRow(
+              context,
+              'DSE Index',
+              marketSummary != null
+                  ? marketSummary.dseIndex.toStringAsFixed(2)
+                  : '0.00',
+            ),
             const SizedBox(height: 12),
-            _buildSummaryRow(context, 'Market Cap', '8.21 TZS'),
+            _buildSummaryRow(
+              context,
+              'Market Cap',
+              marketSummary != null
+                  ? '${marketSummary.marketCap.toStringAsFixed(2)} TZS'
+                  : '0.00 TZS',
+            ),
             const SizedBox(height: 12),
-            _buildSummaryRow(context, 'Total Volume', '534.4K'),
+            _buildSummaryRow(
+              context,
+              'Total Volume',
+              marketSummary != null
+                  ? '${marketSummary.totalVolume.toStringAsFixed(1)}K'
+                  : '0.0K',
+            ),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -314,7 +408,7 @@ class DashboardScreen extends ConsumerWidget {
                   child: _buildSummaryRow(
                     context,
                     'Gainers',
-                    '0',
+                    marketSummary != null ? '${marketSummary.gainers}' : '0',
                     color: Colors.green,
                   ),
                 ),
@@ -322,7 +416,7 @@ class DashboardScreen extends ConsumerWidget {
                   child: _buildSummaryRow(
                     context,
                     'Losers',
-                    '0',
+                    marketSummary != null ? '${marketSummary.losers}' : '0',
                     color: Colors.red,
                   ),
                 ),
@@ -361,6 +455,8 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildMarketOverview(BuildContext context, dynamic dashboard) {
+    final marketOverview = dashboard.marketOverview ?? [];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -384,30 +480,32 @@ class DashboardScreen extends ConsumerWidget {
           child: Column(
             children: [
               _buildOverviewHeader(context),
-              Divider(height: 1),
-              MarketOverviewItem(
-                symbol: 'AFRIPRISE',
-                name: 'AFRIPRISE',
-                price: 445,
-                change: 0,
-                volume: 11400,
-              ),
-              Divider(height: 1),
-              MarketOverviewItem(
-                symbol: 'CRDB',
-                name: 'CRDB',
-                price: 1160,
-                change: 0,
-                volume: 300000,
-              ),
-              Divider(height: 1),
-              MarketOverviewItem(
-                symbol: 'DCB',
-                name: 'DCB',
-                price: 235,
-                change: 0,
-                volume: 78000,
-              ),
+              if (marketOverview.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    'No stocks available',
+                    style: context.textTheme.bodyMedium?.copyWith(
+                      color: context.colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                  ),
+                )
+              else
+                ...marketOverview.asMap().entries.map((entry) {
+                  final stock = entry.value;
+                  return Column(
+                    children: [
+                      if (entry.key > 0) Divider(height: 1),
+                      MarketOverviewItem(
+                        symbol: stock.symbol,
+                        name: stock.name,
+                        price: stock.currentPrice,
+                        change: stock.changePercent,
+                        volume: stock.volume,
+                      ),
+                    ],
+                  );
+                }).toList(),
             ],
           ),
         ),

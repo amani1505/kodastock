@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/config/constants/app_constants.dart';
+import '../../../core/config/theme/theme_provider.dart';
 import '../../providers/auth_provider.dart';
 import 'components/auth_text_field.dart';
 import 'components/auth_button.dart';
@@ -130,6 +131,19 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Logo
+                Center(
+                  child: Image.asset(
+                    ref.watch(isDarkModeProvider)
+                        ? 'assets/images/white_logo.png'
+                        : 'assets/images/black_logo.png',
+                    height: 100,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
                 // Header
                 Text(
                   'Create Account',
@@ -141,7 +155,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 Text(
                   'Fill in your details to get started',
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
                 
@@ -153,10 +167,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.error.withOpacity(0.1),
+                      color: theme.colorScheme.error.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: theme.colorScheme.error.withOpacity(0.5),
+                        color: theme.colorScheme.error.withValues(alpha: 0.5),
                       ),
                     ),
                     child: Row(

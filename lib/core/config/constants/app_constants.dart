@@ -37,14 +37,15 @@ class ApiEndpoints {
   static const String profile = '/profile';
   static const String forgotPassword = '/auth/forgot-password';
   static const String resetPassword = '/auth/reset-password';
-  
+  static const String user = '/user';
 
 
   static const String dashboard = '/dashboard';
   static const String stocksList = '/stocks';
   static String stockDetails(String symbol) => '/stocks/$symbol';
   static const String compare = '/stocks/compare';
-  static String analysis(String symbol) => '/analysis/$symbol';
+  static String analysis(int stockId) => '/analysis/stock/$stockId';
+  static String periods(int stockId) => '/analysis/stock/$stockId/periods';
   static const String marketSummary = '/market/summary';
 }
 

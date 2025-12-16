@@ -1,14 +1,18 @@
 // lib/presentation/providers/app_providers.dart
 
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import '../../core/config/dio_client.dart';  // Import DioClient from here
+import '../../core/config/dio_client.dart';
+import '../../core/config/constants/app_constants.dart';
 import '../../data/sources/remote/stock_api_service.dart';
 import '../../data/sources/local/local_storage.dart';
 import '../../data/repositories/stock_repository_impl.dart';
 import '../../domain/repositories/stock_repository.dart';
 import '../../domain/usecases/stock_usecases.dart';
 import '../../domain/entities/stock_entity.dart';
+import '../../domain/entities/user_entity.dart';
+import '../../data/models/auth/user_model.dart';
 
 // Local Storage Provider
 final localStorageProvider = FutureProvider<LocalStorage>((ref) async {
@@ -56,14 +60,65 @@ final manageWatchlistProvider = Provider<ManageWatchlist>((ref) {
   return ManageWatchlist(ref.watch(stockRepositoryProvider));
 });
 
-// State Providers for Dashboard
+// User Provider - Fetches current user data
+final userProvider = FutureProvider<UserEntity>((ref) async {
+  final dio = ref.watch(dioProvider);
+  try {
+    final response = await dio.get(ApiEndpoints.user);
+    final userModel = UserModel.fromJson(response.data);
+    return userModel.toEntity();
+  } on DioException catch (e) {
+    throw Exception('Failed to load user: ${e.message}');
+  }
+});
+
+// State Providers for Dashboard - Using /stocks API instead of /dashboard
 final dashboardProvider = FutureProvider<DashboardEntity>((ref) async {
-  final getDashboard = ref.watch(getDashboardProvider);
-  final result = await getDashboard();
-  return result.fold(
-    (error) => throw Exception(error),
-    (dashboard) => dashboard,
-  );
+  final getAllStocks = ref.watch(getAllStocksProvider);
+  final watchlist = ref.watch(watchlistProvider);
+
+  try {
+    // Fetch all stocks
+    final result = await getAllStocks();
+
+    return result.fold(
+      (error) => throw Exception(error),
+      (stocks) {
+        // Calculate statistics from stocks
+        final gainers = stocks.where((s) => s.isGainer).toList();
+        final losers = stocks.where((s) => s.isLoser).toList();
+
+        // Sort to find top gainer and loser
+        gainers.sort((a, b) => b.changePercent.compareTo(a.changePercent));
+        losers.sort((a, b) => a.changePercent.compareTo(b.changePercent));
+
+        // Calculate market summary with dummy data
+        final totalVolume = stocks.fold<double>(
+          0.0,
+          (sum, stock) => sum + stock.volume
+        );
+
+        // Create dashboard entity
+        return DashboardEntity(
+          totalStocks: stocks.length,
+          watchlistCount: watchlist.length,
+          topGainer: gainers.isNotEmpty ? gainers.first : null,
+          topLoser: losers.isNotEmpty ? losers.first : null,
+          marketSummary: MarketSummaryEntity(
+            dseIndex: 1842.56, // Dummy data from screenshot
+            marketCap: 8.21, // Dummy data (in TZS)
+            totalVolume: totalVolume / 1000, // Convert to K
+            gainers: gainers.length,
+            losers: losers.length,
+          ),
+          marketOverview: stocks.take(5).toList(), // Top 5 stocks
+          recentActivity: [], // No activity API, empty list
+        );
+      },
+    );
+  } catch (e) {
+    throw Exception('Failed to load dashboard: $e');
+  }
 });
 
 // State Provider for Stocks List

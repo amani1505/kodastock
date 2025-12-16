@@ -13,21 +13,42 @@ import '../../presentation/screens/home/dashboard_screen.dart';
 import '../../presentation/screens/home/stocks_screen.dart';
 import '../../presentation/screens/home/compare_screen.dart';
 import '../../presentation/screens/home/analysis_screen.dart';
+import '../../presentation/screens/profile/profile_screen.dart';
+import '../../presentation/screens/notifications/notifications_screen.dart';
+import 'dio_client.dart';
+
+// Global navigator key for interceptor navigation
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 // Simple auth state provider for routing decisions
 final isAuthenticatedProvider = Provider<bool>((ref) {
+  // Watch the logout signal to trigger re-evaluation
+  ref.watch(authLogoutSignalProvider);
+
   final authState = ref.watch(authProvider);
   return authState.status == AuthStatus.authenticated;
 });
 
 // Router provider
 final routerProvider = Provider<GoRouter>((ref) {
+  // Watch logout signal and update auth state when it changes
+  ref.listen<int>(authLogoutSignalProvider, (previous, next) {
+    if (previous != null && previous != next) {
+      // Signal changed, meaning interceptor cleared auth data
+      ref.read(authProvider.notifier).setUnauthenticated();
+    }
+  });
+
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/',
     debugLogDiagnostics: true,
-    
+
     // Redirect logic - simplified
     redirect: (context, state) {
+      // Watch logout signal to trigger redirect re-evaluation
+      ref.read(authLogoutSignalProvider);
+
       final authState = ref.read(authProvider);
       final isAuthenticated = authState.status == AuthStatus.authenticated;
       final currentPath = state.matchedLocation;
@@ -80,7 +101,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/signup',
         builder: (context, state) => const SignupScreen(),
       ),
-      
+
+      // Profile Route (Protected, but outside shell)
+      GoRoute(
+        path: '/profile',
+        builder: (context, state) => const ProfileScreen(),
+      ),
+
+      // Notifications Route (Protected, but outside shell)
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationsScreen(),
+      ),
+
       // Protected Routes (Dashboard Shell)
       ShellRoute(
         builder: (context, state, child) {

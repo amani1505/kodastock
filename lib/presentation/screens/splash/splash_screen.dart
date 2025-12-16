@@ -120,7 +120,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             end: Alignment.bottomRight,
             colors: [
               theme.colorScheme.primary,
-              theme.colorScheme.primary.withOpacity(0.8),
+              theme.colorScheme.primary.withValues(alpha: 0.8),
               theme.colorScheme.secondary,
             ],
           ),
@@ -135,23 +135,23 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 child: ScaleTransition(
                   scale: _scaleAnimation,
                   child: Container(
-                    width: 120,
-                    height: 120,
+                    padding: const EdgeInsets.all(20),
+                    width: 150,
+                    height: 150,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(30),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
+                          color: Colors.black.withValues(alpha: 0.2),
                           blurRadius: 20,
-                          offset: const Offset(0, 10),
+                          offset: const Offset(0, 5),
                         ),
                       ],
                     ),
-                    child: Icon(
-                      Icons.show_chart,
-                      size: 64,
-                      color: theme.colorScheme.primary,
+                    child: Image.asset(
+                      'assets/images/black_logo.png',
+                      fit: BoxFit.contain,
                     ),
                   ),
                 ),
@@ -180,7 +180,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 child: Text(
                   'Smart Stock Analysis',
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
               ),
@@ -195,7 +195,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   height: 40,
                   child: CircularProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      Colors.white.withOpacity(0.8),
+                      Colors.white.withValues(alpha: 0.8),
                     ),
                     strokeWidth: 3,
                   ),

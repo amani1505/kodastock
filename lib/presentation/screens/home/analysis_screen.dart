@@ -1,27 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/utils/extensions.dart';
+import '../../../core/config/dio_client.dart';
+import '../../../core/config/constants/app_constants.dart';
+import '../../providers/app_providers.dart';
+import '../../../domain/entities/stock_entity.dart';
 
 class AnalysisScreen extends ConsumerStatefulWidget {
-  const AnalysisScreen({Key? key}) : super(key: key);
+  const AnalysisScreen({super.key});
 
   @override
   ConsumerState<AnalysisScreen> createState() => _AnalysisScreenState();
 }
 
 class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
-  String? selectedStock;
-  String selectedPeriod = 'Q2';
-  String fiscalYear = '2025';
-
-  final List<String> availableStocks = [
-    'CRDB',
-    'AFRIPRISE',
-    'DCB',
-    'DSE',
-    'EABL',
-    'JATU',
-  ];
+  StockEntity? selectedStock;
+  Map<String, dynamic>? selectedPeriod;
+  List<Map<String, dynamic>> availablePeriods = [];
+  bool _isLoadingPeriods = false;
+  bool _isAnalyzing = false;
+  dynamic _analysisData;
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +45,7 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
             const SizedBox(height: 24),
             _buildAnalyzeButton(context),
             const SizedBox(height: 32),
-            if (selectedStock != null) ...[
+            if (_analysisData != null) ...[
               _buildAnalysisResults(context),
             ],
           ],
@@ -57,6 +55,8 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
   }
 
   Widget _buildSelectionSection(BuildContext context) {
+    final stocksAsync = ref.watch(stocksListProvider(null));
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -70,100 +70,202 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            DropdownButtonFormField<String>(
-              value: selectedStock,
-              decoration: InputDecoration(
-                labelText: 'Stock',
-                hintText: 'Choose a stock',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              items: availableStocks.map((stock) {
-                return DropdownMenuItem(
-                  value: stock,
-                  child: Text('$stock - $stock'),
+            stocksAsync.when(
+              data: (stocks) {
+                return DropdownButtonFormField<StockEntity>(
+                  initialValue: selectedStock,
+                  decoration: InputDecoration(
+                    labelText: 'Stock',
+                    hintText: 'Choose a stock',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  items: stocks.map((stock) {
+                    return DropdownMenuItem(
+                      value: stock,
+                      child: Text('${stock.symbol} - ${stock.name}'),
+                    );
+                  }).toList(),
+                  onChanged: (stock) {
+                    setState(() {
+                      selectedStock = stock;
+                      selectedPeriod = null;
+                      availablePeriods = [];
+                      _analysisData = null;
+                    });
+                    if (stock != null && stock.id != null) {
+                      _fetchAvailablePeriods(stock.id!);
+                    }
+                  },
                 );
-              }).toList(),
-              onChanged: (value) {
-                setState(() => selectedStock = value);
               },
+              loading: () => DropdownButtonFormField<StockEntity>(
+                decoration: InputDecoration(
+                  labelText: 'Stock',
+                  hintText: 'Loading stocks...',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                items: const [],
+                onChanged: null,
+              ),
+              error: (error, _) => DropdownButtonFormField<StockEntity>(
+                decoration: InputDecoration(
+                  labelText: 'Stock',
+                  hintText: 'Error loading stocks',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                items: const [],
+                onChanged: null,
+              ),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: fiscalYear,
-                    decoration: InputDecoration(
-                      labelText: 'Fiscal Year',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    items: ['2023', '2024', '2025'].map((year) {
-                      return DropdownMenuItem(value: year, child: Text(year));
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() => fiscalYear = value!);
-                    },
+            if (_isLoadingPeriods)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (availablePeriods.isNotEmpty)
+              DropdownButtonFormField<Map<String, dynamic>>(
+                initialValue: selectedPeriod,
+                decoration: InputDecoration(
+                  labelText: 'Period',
+                  hintText: 'Select a period',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: selectedPeriod,
-                    decoration: InputDecoration(
-                      labelText: 'Period',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    items: ['Q1', 'Q2', 'Q3', 'Q4', 'Full Year'].map((period) {
-                      return DropdownMenuItem(value: period, child: Text(period));
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() => selectedPeriod = value!);
-                    },
-                  ),
-                ),
-              ],
-            ),
+                items: availablePeriods.map((period) {
+                  return DropdownMenuItem(
+                    value: period,
+                    child: Text(period['label'] ?? ''),
+                  );
+                }).toList(),
+                onChanged: (period) {
+                  setState(() => selectedPeriod = period);
+                },
+              ),
           ],
         ),
       ),
     );
   }
 
+  Future<void> _fetchAvailablePeriods(int stockId) async {
+    setState(() {
+      _isLoadingPeriods = true;
+    });
+
+    try {
+      final dio = ref.read(dioProvider);
+      final response = await dio.get(
+        ApiEndpoints.periods(stockId),
+      );
+
+      if (mounted) {
+        final periods = (response.data['data']['periods'] as List<dynamic>)
+            .map((p) => p as Map<String, dynamic>)
+            .toList();
+
+        setState(() {
+          availablePeriods = periods;
+          selectedPeriod = periods.isNotEmpty ? periods.first : null;
+          _isLoadingPeriods = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingPeriods = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load periods: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Widget _buildAnalyzeButton(BuildContext context) {
-    final isEnabled = selectedStock != null;
+    final isEnabled = selectedStock != null && selectedPeriod != null && !_isAnalyzing;
 
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: isEnabled
-            ? () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Analyzing ${selectedStock}...')),
-                );
-              }
-            : null,
+        onPressed: isEnabled ? _handleAnalyzeStock : null,
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 16),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.analytics),
-            const SizedBox(width: 8),
-            Text('Analyze'),
-          ],
-        ),
+        child: _isAnalyzing
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.analytics),
+                  const SizedBox(width: 8),
+                  Text('Analyze'),
+                ],
+              ),
       ),
     );
   }
 
+  Future<void> _handleAnalyzeStock() async {
+    if (selectedStock == null || selectedPeriod == null || selectedStock!.id == null) {
+      return;
+    }
+
+    setState(() {
+      _isAnalyzing = true;
+      _analysisData = null;
+    });
+
+    try {
+      final dio = ref.read(dioProvider);
+      final response = await dio.get(
+        ApiEndpoints.analysis(selectedStock!.id!),
+        queryParameters: {
+          'year': selectedPeriod!['year'],
+          'period': selectedPeriod!['period'],
+        },
+      );
+
+      if (mounted) {
+        setState(() {
+          _analysisData = response.data['data'];
+          _isAnalyzing = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isAnalyzing = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to analyze stock: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Widget _buildAnalysisResults(BuildContext context) {
+    if (_analysisData == null) return const SizedBox.shrink();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -181,12 +283,44 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
   }
 
   Widget _buildRecommendationCard(BuildContext context) {
+    final recommendation = _analysisData['analysis']['recommendation'];
+    final action = recommendation['action'] ?? 'N/A';
+    final score = recommendation['score'] ?? 0;
+    final maxScore = recommendation['max_score'] ?? 100;
+    final summary = recommendation['summary'] ?? '';
+
+    // Determine color based on action
+    Color gradientStart;
+    Color gradientEnd;
+    switch (action.toLowerCase()) {
+      case 'strong buy':
+        gradientStart = Colors.green[700]!;
+        gradientEnd = Colors.green[400]!;
+        break;
+      case 'buy':
+        gradientStart = Colors.green[600]!;
+        gradientEnd = Colors.green[300]!;
+        break;
+      case 'hold':
+        gradientStart = Colors.orange[600]!;
+        gradientEnd = Colors.orange[300]!;
+        break;
+      case 'sell':
+      case 'avoid':
+        gradientStart = Colors.red[600]!;
+        gradientEnd = Colors.red[300]!;
+        break;
+      default:
+        gradientStart = Colors.grey[600]!;
+        gradientEnd = Colors.grey[300]!;
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.green[600]!, Colors.green[400]!],
+          colors: [gradientStart, gradientEnd],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -198,13 +332,13 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
           Text(
             'INVESTMENT RECOMMENDATION',
             style: context.textTheme.labelLarge?.copyWith(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 12),
           Text(
-            'Strong Buy',
+            action,
             style: context.textTheme.displaySmall?.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -212,20 +346,20 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'This stock shows excellent fundamentals with strong value characteristics. With 4 positive indicators, it appears to be a compelling investment opportunity.',
+            summary,
             style: context.textTheme.bodyLarge?.copyWith(
-              color: Colors.white.withOpacity(0.95),
+              color: Colors.white.withValues(alpha: 0.95),
             ),
           ),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              'Score: 75/100',
+              'Score: $score/$maxScore',
               style: context.textTheme.titleMedium?.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -238,6 +372,19 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
   }
 
   Widget _buildValuationCard(BuildContext context) {
+    final valuation = _analysisData['analysis']['valuation'];
+    final marketPrice = valuation['market_price'] ?? 0;
+    final bookValue = valuation['book_value_per_share'] ?? 0;
+    final grahamNumber = valuation['graham_number'] ?? 0;
+    final intrinsicValue = valuation['intrinsic_value'] ?? 0;
+    final marginOfSafety = valuation['margin_of_safety'] ?? 0;
+    final valuationStatus = valuation['valuation_status'] ?? 'Unknown';
+
+    // Format valuation status
+    String formatStatus(String status) {
+      return status.split('_').map((word) => word[0].toUpperCase() + word.substring(1)).join(' ');
+    }
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -260,7 +407,7 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: Colors.green.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -274,7 +421,7 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Significantly Undervalued',
+                    formatStatus(valuationStatus),
                     style: context.textTheme.headlineSmall?.copyWith(
                       color: Colors.green[700],
                       fontWeight: FontWeight.bold,
@@ -284,18 +431,18 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            _buildMetricRow(context, 'Market Price', '1,160'),
+            _buildMetricRow(context, 'Market Price', '$marketPrice TZS'),
             Divider(),
-            _buildMetricRow(context, 'Book Value Per Share', '916.27'),
+            _buildMetricRow(context, 'Book Value Per Share', '${bookValue.toStringAsFixed(2)} TZS'),
             Divider(),
-            _buildMetricRow(context, 'Graham Number (Max. Safe Value)', '1,655.88'),
+            _buildMetricRow(context, 'Graham Number (Max. Safe Value)', '${grahamNumber.toStringAsFixed(2)} TZS'),
             Divider(),
-            _buildMetricRow(context, 'Intrinsic Value (True Value)', '1,108.33'),
+            _buildMetricRow(context, 'Intrinsic Value (True Value)', '${intrinsicValue.toStringAsFixed(2)} TZS'),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: Colors.green.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -304,7 +451,7 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Good margin of safety for value investing',
+                      'Margin of safety for value investing',
                       style: context.textTheme.bodyMedium?.copyWith(
                         color: Colors.green[700],
                         fontWeight: FontWeight.w500,
@@ -312,7 +459,7 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
                     ),
                   ),
                   Text(
-                    '29.9%',
+                    '$marginOfSafety%',
                     style: context.textTheme.titleMedium?.copyWith(
                       color: Colors.green[700],
                       fontWeight: FontWeight.bold,
@@ -328,6 +475,15 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
   }
 
   Widget _buildPredictionCard(BuildContext context) {
+    final prediction = _analysisData['analysis']['prediction'];
+    final predictedPrice = prediction['predicted_price'] ?? 0;
+    final conservativePrice = prediction['conservative_price'] ?? 0;
+    final optimisticPrice = prediction['optimistic_price'] ?? 0;
+    final expectedChangePercent = prediction['expected_change_percent'] ?? 0;
+    final expectedChange = prediction['expected_change'] ?? 0;
+    final confidence = prediction['confidence'] ?? 'Unknown';
+    final timeframe = prediction['timeframe'] ?? '';
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -339,7 +495,7 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
                 Icon(Icons.show_chart, color: context.colorScheme.primary),
                 const SizedBox(width: 12),
                 Text(
-                  '3-Month Price Prediction',
+                  '$timeframe Price Prediction',
                   style: context.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -350,15 +506,15 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
             Row(
               children: [
                 Expanded(
-                  child: _buildPredictionItem(context, 'Conservative', '1,051.8'),
+                  child: _buildPredictionItem(context, 'Conservative', '${conservativePrice.toStringAsFixed(2)}'),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildPredictionItem(context, 'Expected', '1,168.67', isPrimary: true),
+                  child: _buildPredictionItem(context, 'Expected', '${predictedPrice.toStringAsFixed(2)}', isPrimary: true),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildPredictionItem(context, 'Optimistic', '1,285.54'),
+                  child: _buildPredictionItem(context, 'Optimistic', '${optimisticPrice.toStringAsFixed(2)}'),
                 ),
               ],
             ),
@@ -366,7 +522,7 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: expectedChangePercent >= 0 ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -377,14 +533,14 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '+0.7%',
+                    '${expectedChangePercent >= 0 ? '+' : ''}${expectedChangePercent.toStringAsFixed(1)}%',
                     style: context.textTheme.headlineMedium?.copyWith(
-                      color: Colors.green[700],
+                      color: expectedChangePercent >= 0 ? Colors.green[700] : Colors.red[700],
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
-                    '(+8.67 TZS)',
+                    '(${expectedChange >= 0 ? '+' : ''}${expectedChange.toStringAsFixed(2)} TZS)',
                     style: context.textTheme.bodySmall,
                   ),
                 ],
@@ -399,8 +555,8 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
                   style: context.textTheme.bodyMedium,
                 ),
                 Chip(
-                  label: Text('High'),
-                  backgroundColor: Colors.green.withOpacity(0.2),
+                  label: Text(confidence[0].toUpperCase() + confidence.substring(1)),
+                  backgroundColor: Colors.green.withValues(alpha: 0.2),
                   labelStyle: TextStyle(
                     color: Colors.green[700],
                     fontWeight: FontWeight.w600,
@@ -419,7 +575,7 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isPrimary
-            ? context.colorScheme.primary.withOpacity(0.1)
+            ? context.colorScheme.primary.withValues(alpha: 0.1)
             : context.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
         border: isPrimary
@@ -448,6 +604,13 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
   }
 
   Widget _buildFinancialMetrics(BuildContext context) {
+    final metrics = _analysisData['analysis']['metrics'];
+    final perShare = metrics['per_share'];
+    final valuation = metrics['valuation'];
+    final profitability = metrics['profitability'];
+    final financialHealth = metrics['financial_health'];
+    final healthScore = _analysisData['analysis']['health_score'] ?? 0;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -471,18 +634,18 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
               spacing: 12,
               runSpacing: 12,
               children: [
-                _buildMetricChip(context, 'EPS', '133.00', Colors.blue),
-                _buildMetricChip(context, 'P/B', '1.27', Colors.green),
-                _buildMetricChip(context, 'PEG', 'N/A', Colors.grey),
-                _buildMetricChip(context, 'DY', '5.60%', Colors.teal),
-                _buildMetricChip(context, 'ROE', '15.22%', Colors.orange),
-                _buildMetricChip(context, 'ROA', '1.85%', Colors.amber),
-                _buildMetricChip(context, 'NPM', '27.55%', Colors.yellow),
-                _buildMetricChip(context, 'GPM', '51.09%', Colors.lime),
-                _buildMetricChip(context, 'D/E', '7.26', Colors.pink),
-                _buildMetricChip(context, 'CR', '0.40', Colors.red),
-                _buildMetricChip(context, 'ICR', '1.91', Colors.orange),
-                _buildMetricChip(context, 'Score', '53', Colors.purple),
+                _buildMetricChip(context, 'EPS', '${perShare['eps']?.toStringAsFixed(2) ?? 'N/A'}', Colors.blue),
+                _buildMetricChip(context, 'P/B', '${valuation['pb_ratio']?.toStringAsFixed(2) ?? 'N/A'}', Colors.green),
+                _buildMetricChip(context, 'PEG', valuation['peg_ratio']?.toString() ?? 'N/A', Colors.grey),
+                _buildMetricChip(context, 'DY', '${valuation['dividend_yield']?.toStringAsFixed(2) ?? 'N/A'}%', Colors.teal),
+                _buildMetricChip(context, 'ROE', '${profitability['roe']?.toStringAsFixed(2) ?? 'N/A'}%', Colors.orange),
+                _buildMetricChip(context, 'ROA', '${profitability['roa']?.toStringAsFixed(2) ?? 'N/A'}%', Colors.amber),
+                _buildMetricChip(context, 'NPM', '${profitability['net_profit_margin']?.toStringAsFixed(2) ?? 'N/A'}%', Colors.yellow),
+                _buildMetricChip(context, 'GPM', '${profitability['gross_profit_margin']?.toStringAsFixed(2) ?? 'N/A'}%', Colors.lime),
+                _buildMetricChip(context, 'D/E', '${financialHealth['debt_to_equity']?.toStringAsFixed(2) ?? 'N/A'}', Colors.pink),
+                _buildMetricChip(context, 'CR', '${financialHealth['current_ratio']?.toStringAsFixed(2) ?? 'N/A'}', Colors.red),
+                _buildMetricChip(context, 'ICR', '${financialHealth['interest_coverage']?.toStringAsFixed(2) ?? 'N/A'}', Colors.orange),
+                _buildMetricChip(context, 'Score', '$healthScore', Colors.purple),
               ],
             ),
           ],
@@ -495,7 +658,7 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -538,10 +701,14 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
   }
 
   Widget _buildSignalsSection(BuildContext context) {
+    final signals = _analysisData['analysis']['signals'];
+    final greenFlags = signals['green_flags'] as List<dynamic>? ?? [];
+    final redFlags = signals['red_flags'] as List<dynamic>? ?? [];
+
     return Column(
       children: [
         Card(
-          color: Colors.green.withOpacity(0.05),
+          color: Colors.green.withValues(alpha: 0.05),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -552,7 +719,7 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
                     Icon(Icons.check_circle, color: Colors.green[700]),
                     const SizedBox(width: 12),
                     Text(
-                      'Positive Signals (4)',
+                      'Positive Signals (${greenFlags.length})',
                       style: context.textTheme.titleMedium?.copyWith(
                         color: Colors.green[700],
                         fontWeight: FontWeight.bold,
@@ -561,37 +728,19 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                _buildSignalItem(
+                ...greenFlags.map((flag) => _buildSignalItem(
                   context,
-                  'Strong Margin of Safety',
-                  'Stock has 29.9% margin of safety, providing downside protection.',
+                  flag['title'] ?? '',
+                  flag['description'] ?? '',
                   true,
-                ),
-                _buildSignalItem(
-                  context,
-                  'Low P/E Ratio',
-                  'P/E of 8.72 suggests the stock may be undervalued relative to earnings.',
-                  true,
-                ),
-                _buildSignalItem(
-                  context,
-                  'High Profit Margin',
-                  'Net profit margin of 27.55% indicates strong pricing power.',
-                  true,
-                ),
-                _buildSignalItem(
-                  context,
-                  'Attractive Dividend Yield',
-                  'Dividend yield of 5.6% provides income while you hold.',
-                  true,
-                ),
+                )),
               ],
             ),
           ),
         ),
         const SizedBox(height: 16),
         Card(
-          color: Colors.red.withOpacity(0.05),
+          color: Colors.red.withValues(alpha: 0.05),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -602,7 +751,7 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
                     Icon(Icons.warning, color: Colors.red[700]),
                     const SizedBox(width: 12),
                     Text(
-                      'Warning Signals (2)',
+                      'Warning Signals (${redFlags.length})',
                       style: context.textTheme.titleMedium?.copyWith(
                         color: Colors.red[700],
                         fontWeight: FontWeight.bold,
@@ -611,18 +760,12 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                _buildSignalItem(
+                ...redFlags.map((flag) => _buildSignalItem(
                   context,
-                  'High Debt Level',
-                  'Debt-to-equity of 7.26 indicates high financial risk.',
+                  flag['title'] ?? '',
+                  flag['description'] ?? '',
                   false,
-                ),
-                _buildSignalItem(
-                  context,
-                  'Liquidity Concerns',
-                  'Current ratio below 1 indicates potential short-term payment issues.',
-                  false,
-                ),
+                )),
               ],
             ),
           ),
@@ -647,7 +790,7 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
           Text(
             description,
             style: context.textTheme.bodySmall?.copyWith(
-              color: context.colorScheme.onSurface.withOpacity(0.7),
+              color: context.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -664,7 +807,7 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
           Text(
             label,
             style: context.textTheme.bodyMedium?.copyWith(
-              color: context.colorScheme.onSurface.withOpacity(0.7),
+              color: context.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           Text(
