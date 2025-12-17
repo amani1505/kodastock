@@ -15,6 +15,7 @@ import '../../presentation/screens/home/compare_screen.dart';
 import '../../presentation/screens/home/analysis_screen.dart';
 import '../../presentation/screens/profile/profile_screen.dart';
 import '../../presentation/screens/notifications/notifications_screen.dart';
+import '../../presentation/screens/stocks/stock_detail_screen.dart';
 import 'dio_client.dart';
 
 // Global navigator key for interceptor navigation
@@ -112,6 +113,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/notifications',
         builder: (context, state) => const NotificationsScreen(),
+      ),
+
+      // Stock Detail Route (Protected, but outside shell)
+      GoRoute(
+        path: '/stock/:symbol',
+        builder: (context, state) {
+          final symbol = state.pathParameters['symbol']!;
+          return StockDetailScreen(symbol: symbol);
+        },
       ),
 
       // Protected Routes (Dashboard Shell)

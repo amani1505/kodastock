@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/utils/bottom_sheet_utils.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../domain/entities/stock_entity.dart';
 import '../../providers/app_providers.dart';
@@ -178,20 +178,17 @@ class _StocksScreenState extends ConsumerState<StocksScreen> {
             ),
           ),
           Expanded(
-            child: GridView.builder(
+            child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: context.isMobile ? 1 : (context.isTablet ? 2 : 3),
-                childAspectRatio: 0.85,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              ),
               itemCount: stocks.length,
               itemBuilder: (context, index) {
                 final stock = stocks[index];
-                return StockCard(
-                  stock: stock,
-                  onTap: () => _showStockDetails(context, stock),
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: StockCard(
+                    stock: stock,
+                    onTap: () => _showStockDetails(context, stock),
+                  ),
                 );
               },
             ),
@@ -233,56 +230,7 @@ class _StocksScreenState extends ConsumerState<StocksScreen> {
   }
 
   void _showStockDetails(BuildContext context, StockEntity stock) {
-    BottomSheetUtils.showStockDetailsBottomSheet(
-      context: context,
-      symbol: stock.symbol,
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildDetailRow(context, 'Current Price', '${stock.currentPrice.toStringAsFixed(2)} TZS'),
-          _buildDetailRow(context, 'Change', '${stock.changePercent.toStringAsFixed(2)}%'),
-          _buildDetailRow(context, 'Volume', '${stock.volume.toStringAsFixed(0)}'),
-          _buildDetailRow(context, 'Market Cap', stock.marketCap != null 
-              ? '${stock.marketCap!.toStringAsFixed(0)} TZS' 
-              : 'N/A'),
-          if (stock.sector != null)
-            _buildDetailRow(context, 'Sector', stock.sector!),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                // Navigate to full analysis
-                Navigator.of(context).pop();
-              },
-              child: Text('View Full Analysis'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(BuildContext context, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: context.textTheme.bodyMedium?.copyWith(
-              color: context.colorScheme.onSurface.withOpacity(0.7),
-            ),
-          ),
-          Text(
-            value,
-            style: context.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
+    // Navigate to the detailed stock screen
+    context.push('/stock/${stock.symbol}');
   }
 }

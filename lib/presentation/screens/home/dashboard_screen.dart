@@ -266,6 +266,15 @@ class DashboardScreen extends ConsumerWidget {
     required Color color,
   }) {
     return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: color.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -319,44 +328,111 @@ class DashboardScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: QuickActionCard(
-                icon: Icons.show_chart,
-                label: 'All Stocks',
-                color: Colors.blue,
-                onTap: () {},
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: QuickActionCard(
-                icon: Icons.compare_arrows,
-                label: 'Compare',
-                color: Colors.purple,
-                onTap: () {},
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: QuickActionCard(
-                icon: Icons.bookmark_border,
-                label: 'Watchlist',
-                color: Colors.green,
-                onTap: () {},
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: QuickActionCard(
-                icon: Icons.lightbulb_outline,
-                label: 'Analysis',
-                color: Colors.amber,
-                onTap: () {},
-              ),
-            ),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // Determine grid layout based on screen width
+            if (constraints.maxWidth < 400) {
+              // Very small screens: 2 columns
+              return Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: QuickActionCard(
+                          icon: Icons.show_chart,
+                          label: 'All Stocks',
+                          color: Colors.blue,
+                          onTap: () => context.go('/stocks'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: QuickActionCard(
+                          icon: Icons.compare_arrows,
+                          label: 'Compare',
+                          color: Colors.purple,
+                          onTap: () => context.go('/compare'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: QuickActionCard(
+                          icon: Icons.bookmark_border,
+                          label: 'Watchlist',
+                          color: Colors.green,
+                          onTap: () {
+                            // TODO: Navigate to watchlist when route is created
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Watchlist coming soon!')),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: QuickActionCard(
+                          icon: Icons.lightbulb_outline,
+                          label: 'Analysis',
+                          color: Colors.amber,
+                          onTap: () => context.go('/analysis'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            } else {
+              // Normal screens: 4 columns in a row
+              return Row(
+                children: [
+                  Expanded(
+                    child: QuickActionCard(
+                      icon: Icons.show_chart,
+                      label: 'All Stocks',
+                      color: Colors.blue,
+                      onTap: () => context.go('/stocks'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: QuickActionCard(
+                      icon: Icons.compare_arrows,
+                      label: 'Compare',
+                      color: Colors.purple,
+                      onTap: () => context.go('/compare'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: QuickActionCard(
+                      icon: Icons.bookmark_border,
+                      label: 'Watchlist',
+                      color: Colors.green,
+                      onTap: () {
+                        // TODO: Navigate to watchlist when route is created
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Watchlist coming soon!')),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: QuickActionCard(
+                      icon: Icons.lightbulb_outline,
+                      label: 'Analysis',
+                      color: Colors.amber,
+                      onTap: () => context.go('/analysis'),
+                    ),
+                  ),
+                ],
+              );
+            }
+          },
         ),
       ],
     );
@@ -366,6 +442,15 @@ class DashboardScreen extends ConsumerWidget {
     final marketSummary = dashboard.marketSummary;
 
     return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: context.colorScheme.primary.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -477,6 +562,15 @@ class DashboardScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
         Card(
+          elevation: 2,
+          shadowColor: Colors.black.withValues(alpha: 0.1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: context.colorScheme.primary.withValues(alpha: 0.2),
+              width: 1,
+            ),
+          ),
           child: Column(
             children: [
               _buildOverviewHeader(context),
@@ -575,6 +669,15 @@ class DashboardScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
         Card(
+          elevation: 2,
+          shadowColor: Colors.black.withValues(alpha: 0.1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: context.colorScheme.primary.withValues(alpha: 0.2),
+              width: 1,
+            ),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(

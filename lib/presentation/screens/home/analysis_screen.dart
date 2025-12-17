@@ -58,6 +58,15 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
     final stocksAsync = ref.watch(stocksListProvider(null));
 
     return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: context.colorScheme.primary.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -325,6 +334,17 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: gradientStart.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -386,6 +406,15 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
     }
 
     return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Colors.green.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -405,6 +434,7 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
             ),
             const SizedBox(height: 16),
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.green.withValues(alpha: 0.1),
@@ -485,6 +515,15 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
     final timeframe = prediction['timeframe'] ?? '';
 
     return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: context.colorScheme.primary.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -520,6 +559,7 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
             ),
             const SizedBox(height: 16),
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: expectedChangePercent >= 0 ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
@@ -556,7 +596,11 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
                 ),
                 Chip(
                   label: Text(confidence[0].toUpperCase() + confidence.substring(1)),
-                  backgroundColor: Colors.green.withValues(alpha: 0.2),
+                  backgroundColor: Colors.green.withValues(alpha: 0.1),
+                  side: BorderSide(
+                    color: Colors.green.withValues(alpha: 0.2),
+                    width: 1,
+                  ),
                   labelStyle: TextStyle(
                     color: Colors.green[700],
                     fontWeight: FontWeight.w600,
@@ -572,31 +616,41 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
 
   Widget _buildPredictionItem(BuildContext context, String label, String value, {bool isPrimary = false}) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
         color: isPrimary
             ? context.colorScheme.primary.withValues(alpha: 0.1)
             : context.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
-        border: isPrimary
-            ? Border.all(color: context.colorScheme.primary, width: 2)
-            : null,
+        border: Border.all(
+          color: isPrimary
+              ? context.colorScheme.primary
+              : Colors.grey.withValues(alpha: 0.5),
+          width: isPrimary ? 2 : 1,
+        ),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             label,
             style: context.textTheme.labelSmall,
             textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
           const SizedBox(height: 8),
-          Text(
-            value,
-            style: context.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: isPrimary ? context.colorScheme.primary : null,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: context.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: isPrimary ? context.colorScheme.primary : null,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -611,7 +665,31 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
     final financialHealth = metrics['financial_health'];
     final healthScore = _analysisData['analysis']['health_score'] ?? 0;
 
+    final metricItems = [
+      {'label': 'EPS', 'value': '${perShare['eps']?.toStringAsFixed(2) ?? 'N/A'}', 'color': Colors.blue},
+      {'label': 'P/B', 'value': '${valuation['pb_ratio']?.toStringAsFixed(2) ?? 'N/A'}', 'color': Colors.green},
+      {'label': 'PEG', 'value': valuation['peg_ratio']?.toString() ?? 'N/A', 'color': Colors.grey},
+      {'label': 'DY', 'value': '${valuation['dividend_yield']?.toStringAsFixed(2) ?? 'N/A'}%', 'color': Colors.teal},
+      {'label': 'ROE', 'value': '${profitability['roe']?.toStringAsFixed(2) ?? 'N/A'}%', 'color': Colors.blue},
+      {'label': 'ROA', 'value': '${profitability['roa']?.toStringAsFixed(2) ?? 'N/A'}%', 'color': Colors.green},
+      {'label': 'NPM', 'value': '${profitability['net_profit_margin']?.toStringAsFixed(2) ?? 'N/A'}%', 'color': Colors.teal},
+      {'label': 'GPM', 'value': '${profitability['gross_profit_margin']?.toStringAsFixed(2) ?? 'N/A'}%', 'color':Colors.red },
+      {'label': 'D/E', 'value': '${financialHealth['debt_to_equity']?.toStringAsFixed(2) ?? 'N/A'}', 'color': Colors.pink},
+      {'label': 'CR', 'value': '${financialHealth['current_ratio']?.toStringAsFixed(2) ?? 'N/A'}', 'color': Colors.red},
+      {'label': 'ICR', 'value': '${financialHealth['interest_coverage']?.toStringAsFixed(2) ?? 'N/A'}', 'color': Colors.orange},
+      {'label': 'Score', 'value': '$healthScore', 'color': Colors.purple},
+    ];
+
     return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Colors.purple.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -630,23 +708,47 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
               ],
             ),
             const SizedBox(height: 20),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _buildMetricChip(context, 'EPS', '${perShare['eps']?.toStringAsFixed(2) ?? 'N/A'}', Colors.blue),
-                _buildMetricChip(context, 'P/B', '${valuation['pb_ratio']?.toStringAsFixed(2) ?? 'N/A'}', Colors.green),
-                _buildMetricChip(context, 'PEG', valuation['peg_ratio']?.toString() ?? 'N/A', Colors.grey),
-                _buildMetricChip(context, 'DY', '${valuation['dividend_yield']?.toStringAsFixed(2) ?? 'N/A'}%', Colors.teal),
-                _buildMetricChip(context, 'ROE', '${profitability['roe']?.toStringAsFixed(2) ?? 'N/A'}%', Colors.orange),
-                _buildMetricChip(context, 'ROA', '${profitability['roa']?.toStringAsFixed(2) ?? 'N/A'}%', Colors.amber),
-                _buildMetricChip(context, 'NPM', '${profitability['net_profit_margin']?.toStringAsFixed(2) ?? 'N/A'}%', Colors.yellow),
-                _buildMetricChip(context, 'GPM', '${profitability['gross_profit_margin']?.toStringAsFixed(2) ?? 'N/A'}%', Colors.lime),
-                _buildMetricChip(context, 'D/E', '${financialHealth['debt_to_equity']?.toStringAsFixed(2) ?? 'N/A'}', Colors.pink),
-                _buildMetricChip(context, 'CR', '${financialHealth['current_ratio']?.toStringAsFixed(2) ?? 'N/A'}', Colors.red),
-                _buildMetricChip(context, 'ICR', '${financialHealth['interest_coverage']?.toStringAsFixed(2) ?? 'N/A'}', Colors.orange),
-                _buildMetricChip(context, 'Score', '$healthScore', Colors.purple),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                // Determine number of columns based on available width
+                int crossAxisCount;
+                double childAspectRatio;
+
+                if (constraints.maxWidth < 600) {
+                  // Mobile: 2 columns
+                  crossAxisCount = 2;
+                  childAspectRatio = 1.5;
+                } else if (constraints.maxWidth < 900) {
+                  // Tablet: 3 columns
+                  crossAxisCount = 3;
+                  childAspectRatio = 1.3;
+                } else {
+                  // Desktop: 4 columns
+                  crossAxisCount = 4;
+                  childAspectRatio = 1.2;
+                }
+
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: childAspectRatio,
+                  ),
+                  itemCount: metricItems.length,
+                  itemBuilder: (context, index) {
+                    final item = metricItems[index];
+                    return _buildMetricChip(
+                      context,
+                      item['label'] as String,
+                      item['value'] as String,
+                      item['color'] as Color,
+                    );
+                  },
+                );
+              },
             ),
           ],
         ),
@@ -656,12 +758,17 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
 
   Widget _buildMetricChip(BuildContext context, String label, String value, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withValues(alpha: 0.3),
+          width: 1,
+        ),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -670,13 +777,21 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
               color: color,
               fontWeight: FontWeight.w600,
             ),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
           const SizedBox(height: 4),
-          Text(
-            value,
-            style: context.textTheme.titleMedium?.copyWith(
-              color: color,
-              fontWeight: FontWeight.bold,
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                style: context.textTheme.titleMedium?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
         ],
@@ -708,7 +823,16 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
     return Column(
       children: [
         Card(
+          elevation: 2,
+          shadowColor: Colors.black.withValues(alpha: 0.1),
           color: Colors.green.withValues(alpha: 0.05),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: Colors.green.withValues(alpha: 0.3),
+              width: 1,
+            ),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -740,7 +864,16 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
         ),
         const SizedBox(height: 16),
         Card(
+          elevation: 2,
+          shadowColor: Colors.black.withValues(alpha: 0.1),
           color: Colors.red.withValues(alpha: 0.05),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: Colors.red.withValues(alpha: 0.3),
+              width: 1,
+            ),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(

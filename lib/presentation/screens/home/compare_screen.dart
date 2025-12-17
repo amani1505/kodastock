@@ -58,10 +58,10 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
           ],
         ),
       ),
-      body: Column(
-        children: [
-          // Fixed header section (not scrollable)
-          SingleChildScrollView(
+      body: CustomScrollView(
+        slivers: [
+          // Header section (selection and compare button)
+          SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -74,9 +74,9 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
               ),
             ),
           ),
-          // Expandable results section with independent scrolling
+          // Results section
           if (_showResults && stock1 != null && stock2 != null)
-            Expanded(
+            SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: _buildComparisonResults(context),
@@ -89,6 +89,15 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
 
   Widget _buildSelectionSection(BuildContext context) {
     return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: context.colorScheme.primary.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -313,21 +322,17 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
   Widget _buildComparisonResults(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // Scrollable header with badges
-        SingleChildScrollView(
-          child: Column(
-            children: [
-              _buildResultBadges(context),
-              const SizedBox(height: 24),
-            ],
-          ),
-        ),
+        // Badges section
+        _buildResultBadges(context),
+        const SizedBox(height: 16),
         // Fixed tab bar
         _buildTabBar(context),
-        const SizedBox(height: 20),
-        // Expanded scrollable tab content
-        Expanded(
+        const SizedBox(height: 16),
+        // Tab content
+        SizedBox(
+          height: MediaQuery.of(context).size.height * 0.6,
           child: _buildTabContent(context),
         ),
       ],
@@ -483,105 +488,140 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
     final stocksList = _comparisonData['stocks'] as List<dynamic>?;
     if (stocksList == null || stocksList.isEmpty) return const SizedBox.shrink();
 
-    return Row(
-      children: stocksList.map<Widget>((stockData) {
-        final stock = stockData['stock'];
-        final symbol = stock['symbol'] ?? '';
-        final name = stock['name'] ?? '';
-        final recommendation = stockData['recommendation'];
-        final action = recommendation['action'] ?? 'N/A';
-        final score = recommendation['score'] ?? 0;
-        final breakdown = recommendation['breakdown'];
-        final technicalScore = breakdown?['technical_score'] ?? 0;
-        final fundamentalScore = breakdown?['fundamental_score'] ?? 0;
-        final summary = recommendation['summary'] ?? 'No data available';
-
-        // Determine status color based on action
-        Color statusColor;
-        switch (action.toLowerCase()) {
-          case 'buy':
-          case 'strong buy':
-            statusColor = Colors.green;
-            break;
-          case 'hold':
-          case 'caution':
-            statusColor = Colors.orange;
-            break;
-          case 'sell':
-          case 'avoid':
-            statusColor = Colors.red;
-            break;
-          default:
-            statusColor = Colors.grey;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Use column layout for small screens, row for larger screens
+        if (constraints.maxWidth < 600) {
+          return Column(
+            children: stocksList.map<Widget>((stockData) {
+              return _buildStockCard(context, stockData);
+            }).toList(),
+          );
         }
 
-        return Expanded(
-          child: Card(
-            margin: const EdgeInsets.symmetric(horizontal: 8),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            symbol,
-                            style: context.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            name,
-                            style: context.textTheme.bodySmall?.copyWith(
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Icon(Icons.bookmark_border, color: Colors.grey),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      action,
-                      style: TextStyle(
-                        color: statusColor,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildScoreRow(context, 'Overall Score', score, 100),
-                  const SizedBox(height: 8),
-                  _buildScoreRow(context, 'Technical', technicalScore, 50),
-                  const SizedBox(height: 8),
-                  _buildScoreRow(context, 'Fundamental', fundamentalScore, 50),
-                  const SizedBox(height: 16),
-                  Text(
-                    summary,
-                    style: context.textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[600],
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: stocksList.map<Widget>((stockData) {
+              return SizedBox(
+                width: constraints.maxWidth / stocksList.length - 16,
+                child: _buildStockCard(context, stockData),
+              );
+            }).toList(),
           ),
         );
-      }).toList(),
+      },
+    );
+  }
+
+  Widget _buildStockCard(BuildContext context, dynamic stockData) {
+    final stock = stockData['stock'];
+    final symbol = stock['symbol'] ?? '';
+    final name = stock['name'] ?? '';
+    final recommendation = stockData['recommendation'];
+    final action = recommendation['action'] ?? 'N/A';
+    final score = recommendation['score'] ?? 0;
+    final breakdown = recommendation['breakdown'];
+    final technicalScore = breakdown?['technical_score'] ?? 0;
+    final fundamentalScore = breakdown?['fundamental_score'] ?? 0;
+    final summary = recommendation['summary'] ?? 'No data available';
+
+    // Determine status color based on action
+    Color statusColor;
+    switch (action.toLowerCase()) {
+      case 'buy':
+      case 'strong buy':
+        statusColor = Colors.green;
+        break;
+      case 'hold':
+      case 'caution':
+        statusColor = Colors.orange;
+        break;
+      case 'sell':
+      case 'avoid':
+        statusColor = Colors.red;
+        break;
+      default:
+        statusColor = Colors.grey;
+    }
+
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      margin: const EdgeInsets.only(bottom: 16, left: 8, right: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        symbol,
+                        style: context.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        name,
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: Colors.grey,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 2,
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.bookmark_border, color: Colors.grey),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: statusColor.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                action,
+                style: TextStyle(
+                  color: statusColor,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildScoreRow(context, 'Overall Score', score, 100),
+            const SizedBox(height: 8),
+            _buildScoreRow(context, 'Technical', technicalScore, 50),
+            const SizedBox(height: 8),
+            _buildScoreRow(context, 'Fundamental', fundamentalScore, 50),
+            const SizedBox(height: 16),
+            Text(
+              summary,
+              style: context.textTheme.bodySmall?.copyWith(
+                color: Colors.grey[600],
+                fontSize: 11,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -629,6 +669,15 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
     }).toList();
 
     return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: context.colorScheme.primary.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -954,48 +1003,93 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
   }
 
   Widget _buildPredictionCards(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: _buildPredictionCard(
-            context,
-            'CRDB',
-            currentPrice: '1,160',
-            target: '1,176.51',
-            expectedChange: '+1.4%',
-            conservative: '1,058.86',
-            optimistic: '1,294.16',
-            confidence: 'high',
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildPredictionCard(
-            context,
-            'DSE',
-            currentPrice: null,
-            target: null,
-            expectedChange: null,
-            conservative: null,
-            optimistic: null,
-            confidence: null,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildPredictionCard(
-            context,
-            'AFRIPRISE',
-            currentPrice: null,
-            target: null,
-            expectedChange: null,
-            conservative: null,
-            optimistic: null,
-            confidence: null,
-          ),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Use column layout for small screens
+        if (constraints.maxWidth < 600) {
+          return Column(
+            children: [
+              _buildPredictionCard(
+                context,
+                'CRDB',
+                currentPrice: '1,160',
+                target: '1,176.51',
+                expectedChange: '+1.4%',
+                conservative: '1,058.86',
+                optimistic: '1,294.16',
+                confidence: 'high',
+              ),
+              const SizedBox(height: 16),
+              _buildPredictionCard(
+                context,
+                'DSE',
+                currentPrice: null,
+                target: null,
+                expectedChange: null,
+                conservative: null,
+                optimistic: null,
+                confidence: null,
+              ),
+              const SizedBox(height: 16),
+              _buildPredictionCard(
+                context,
+                'AFRIPRISE',
+                currentPrice: null,
+                target: null,
+                expectedChange: null,
+                conservative: null,
+                optimistic: null,
+                confidence: null,
+              ),
+            ],
+          );
+        }
+
+        // Use row layout for larger screens
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _buildPredictionCard(
+                context,
+                'CRDB',
+                currentPrice: '1,160',
+                target: '1,176.51',
+                expectedChange: '+1.4%',
+                conservative: '1,058.86',
+                optimistic: '1,294.16',
+                confidence: 'high',
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildPredictionCard(
+                context,
+                'DSE',
+                currentPrice: null,
+                target: null,
+                expectedChange: null,
+                conservative: null,
+                optimistic: null,
+                confidence: null,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildPredictionCard(
+                context,
+                'AFRIPRISE',
+                currentPrice: null,
+                target: null,
+                expectedChange: null,
+                conservative: null,
+                optimistic: null,
+                confidence: null,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -1010,6 +1104,15 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
     String? confidence,
   }) {
     return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: context.colorScheme.primary.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
