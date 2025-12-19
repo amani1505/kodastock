@@ -74,15 +74,17 @@ class MarketOverviewItem extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 Formatters.formatCurrency(price).split(' ')[0],
                 style: context.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
-                textAlign: TextAlign.right,
+                textAlign: TextAlign.center,
               ),
             ),
+            const SizedBox(width: 8),
             Expanded(
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

@@ -81,6 +81,8 @@ DashboardModel _$DashboardModelFromJson(Map<String, dynamic> json) =>
     DashboardModel(
       totalStocks: (json['total_stocks'] as num?)?.toInt() ?? 0,
       watchlistCount: (json['watchlist_count'] as num?)?.toInt() ?? 0,
+      totalGainers: (json['total_gainers'] as num?)?.toInt() ?? 0,
+      totalLosers: (json['total_losers'] as num?)?.toInt() ?? 0,
       topGainer: json['top_gainer'] == null
           ? null
           : StockModel.fromJson(json['top_gainer'] as Map<String, dynamic>),
@@ -105,6 +107,8 @@ Map<String, dynamic> _$DashboardModelToJson(DashboardModel instance) =>
     <String, dynamic>{
       'total_stocks': instance.totalStocks,
       'watchlist_count': instance.watchlistCount,
+      'total_gainers': instance.totalGainers,
+      'total_losers': instance.totalLosers,
       'top_gainer': instance.topGainer,
       'top_loser': instance.topLoser,
       'market_summary': instance.marketSummary,

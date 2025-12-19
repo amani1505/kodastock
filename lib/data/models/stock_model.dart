@@ -172,28 +172,36 @@ class DashboardResponse {
 class DashboardModel {
   @JsonKey(name: 'total_stocks', defaultValue: 0)
   final int totalStocks;
-  
+
   @JsonKey(name: 'watchlist_count', defaultValue: 0)
   final int watchlistCount;
-  
+
+  @JsonKey(name: 'total_gainers', defaultValue: 0)
+  final int totalGainers;
+
+  @JsonKey(name: 'total_losers', defaultValue: 0)
+  final int totalLosers;
+
   @JsonKey(name: 'top_gainer')
   final StockModel? topGainer;
-  
+
   @JsonKey(name: 'top_loser')
   final StockModel? topLoser;
-  
+
   @JsonKey(name: 'market_summary')
   final MarketSummaryModel? marketSummary;
-  
+
   @JsonKey(name: 'market_overview', defaultValue: [])
   final List<StockModel> marketOverview;
-  
+
   @JsonKey(name: 'recent_activity', defaultValue: [])
   final List<ActivityModel> recentActivity;
 
   DashboardModel({
     this.totalStocks = 0,
     this.watchlistCount = 0,
+    this.totalGainers = 0,
+    this.totalLosers = 0,
     this.topGainer,
     this.topLoser,
     this.marketSummary,
@@ -210,6 +218,8 @@ class DashboardModel {
     return DashboardEntity(
       totalStocks: totalStocks,
       watchlistCount: watchlistCount,
+      totalGainers: totalGainers,
+      totalLosers: totalLosers,
       topGainer: topGainer?.toEntity(),
       topLoser: topLoser?.toEntity(),
       marketSummary: marketSummary?.toEntity(),

@@ -75,6 +75,8 @@ class StockEntity {
 class DashboardEntity {
   final int totalStocks;
   final int watchlistCount;
+  final int totalGainers;
+  final int totalLosers;
   final StockEntity? topGainer;
   final StockEntity? topLoser;
   final MarketSummaryEntity? marketSummary; // Made nullable
@@ -84,6 +86,8 @@ class DashboardEntity {
   const DashboardEntity({
     this.totalStocks = 0,
     this.watchlistCount = 0,
+    this.totalGainers = 0,
+    this.totalLosers = 0,
     this.topGainer,
     this.topLoser,
     this.marketSummary, // Now accepts null
@@ -94,6 +98,8 @@ class DashboardEntity {
   DashboardEntity copyWith({
     int? totalStocks,
     int? watchlistCount,
+    int? totalGainers,
+    int? totalLosers,
     StockEntity? topGainer,
     StockEntity? topLoser,
     MarketSummaryEntity? marketSummary,
@@ -103,6 +109,8 @@ class DashboardEntity {
     return DashboardEntity(
       totalStocks: totalStocks ?? this.totalStocks,
       watchlistCount: watchlistCount ?? this.watchlistCount,
+      totalGainers: totalGainers ?? this.totalGainers,
+      totalLosers: totalLosers ?? this.totalLosers,
       topGainer: topGainer ?? this.topGainer,
       topLoser: topLoser ?? this.topLoser,
       marketSummary: marketSummary ?? this.marketSummary,

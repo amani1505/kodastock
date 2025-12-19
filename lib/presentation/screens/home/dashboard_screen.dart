@@ -235,22 +235,22 @@ class DashboardScreen extends ConsumerWidget {
         Expanded(
           child: _buildStatCard(
             context,
-            icon: Icons.business,
-            title: 'Total Stocks',
-            value: '${dashboard.totalStocks}',
-            subtitle: 'DSE Listed Companies',
-            color: Colors.blue,
+            icon: Icons.trending_up,
+            title: 'Stocks Up',
+            value: '${dashboard.totalGainers ?? 0}',
+            subtitle: 'Today',
+            color: Colors.green,
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: _buildStatCard(
             context,
-            icon: Icons.bookmark_border,
-            title: 'Watchlist',
-            value: '${dashboard.watchlistCount}',
-            subtitle: 'Stocks Tracking',
-            color: Colors.purple,
+            icon: Icons.trending_down,
+            title: 'Stocks Down',
+            value: '${dashboard.totalLosers ?? 0}',
+            subtitle: 'Today',
+            color: Colors.red,
           ),
         ),
       ],
@@ -497,6 +497,7 @@ class DashboardScreen extends ConsumerWidget {
                     color: Colors.green,
                   ),
                 ),
+                      const SizedBox(width: 12),
                 Expanded(
                   child: _buildSummaryRow(
                     context,
@@ -522,12 +523,15 @@ class DashboardScreen extends ConsumerWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: context.textTheme.bodyMedium?.copyWith(
-            color: context.colorScheme.onSurface.withOpacity(0.7),
+        Expanded(
+          child: Text(
+            label,
+            style: context.textTheme.bodyMedium?.copyWith(
+              color: context.colorScheme.onSurface.withOpacity(0.7),
+            ),
           ),
         ),
+        const SizedBox(width: 8),
         Text(
           value,
           style: context.textTheme.titleMedium?.copyWith(
@@ -622,6 +626,7 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ),
           ),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               'PRICE',
@@ -629,9 +634,10 @@ class DashboardScreen extends ConsumerWidget {
                 fontWeight: FontWeight.w600,
                 color: context.colorScheme.onSurface.withOpacity(0.6),
               ),
-              textAlign: TextAlign.right,
+              textAlign: TextAlign.center,
             ),
           ),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               'CHANGE',
@@ -639,9 +645,10 @@ class DashboardScreen extends ConsumerWidget {
                 fontWeight: FontWeight.w600,
                 color: context.colorScheme.onSurface.withOpacity(0.6),
               ),
-              textAlign: TextAlign.right,
+              textAlign: TextAlign.center,
             ),
           ),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               'VOLUME',

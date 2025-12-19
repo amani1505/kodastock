@@ -61,11 +61,15 @@ class _StockDetailScreenState extends ConsumerState<StockDetailScreen> {
       final dio = ref.read(dioProvider);
       final response = await dio.get('${AppConstants.baseUrl}/stocks/${widget.symbol}');
 
+      debugPrint('Stock response: ${response.data}');
+
       if (mounted) {
         setState(() {
-          stockData = response.data['stock'];
+          // API returns data under response.data['data']['stock']
+          stockData = response.data['data']?['stock'] ?? response.data['stock'];
           _isLoadingStock = false;
         });
+        debugPrint('Stock data loaded: $stockData');
       }
     } catch (e) {
       if (mounted) {
@@ -108,24 +112,55 @@ class _StockDetailScreenState extends ConsumerState<StockDetailScreen> {
       return;
     }
 
+    // Validate capital input
+    if (_capitalController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter investment capital')),
+      );
+      return;
+    }
+
+    final capital = int.tryParse(_capitalController.text);
+    if (capital == null || capital <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid investment amount')),
+      );
+      return;
+    }
+
     setState(() => _isLoadingSimulation = true);
     try {
       final dio = ref.read(dioProvider);
+
+      final requestData = {
+        'stock_id': stockData!['id'],
+        'capital': capital,
+        'strategy': _selectedStrategy.toLowerCase(),
+      };
+
+      // Only add buy_date if it's provided
+      if (_dateController.text.isNotEmpty) {
+        requestData['buy_date'] = _formatDateForApi(_dateController.text);
+      }
+
+      debugPrint('Sending simulation request: $requestData');
+
       final response = await dio.post(
         '${AppConstants.baseUrl}/simulate-investment',
-        data: {
-          'stock_id': stockData!['id'],
-          'capital': int.parse(_capitalController.text),
-          'buy_date': _formatDateForApi(_dateController.text),
-          'strategy': _selectedStrategy.toLowerCase(),
-        },
+        data: requestData,
       );
+
+      debugPrint('Simulation response: ${response.data}');
 
       if (mounted) {
         setState(() {
           simulationData = response.data['data'];
           _isLoadingSimulation = false;
         });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Simulation completed successfully!')),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -134,7 +169,7 @@ class _StockDetailScreenState extends ConsumerState<StockDetailScreen> {
       debugPrint('Error running simulation: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error running simulation: ${e.toString()}')),
+          SnackBar(content: Text('Error: ${e.toString()}')),
         );
       }
     }
@@ -918,7 +953,7 @@ class _StockDetailScreenState extends ConsumerState<StockDetailScreen> {
           const SizedBox(height: 8),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 20),
             decoration: BoxDecoration(
               color: const Color(AppColors.warningColor).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(4),
@@ -1010,6 +1045,15 @@ class _StockDetailScreenState extends ConsumerState<StockDetailScreen> {
 
           // Moving Averages
           Card(
+            elevation: 2,
+            shadowColor: Colors.black.withValues(alpha: 0.1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: context.colorScheme.primary.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -1034,6 +1078,15 @@ class _StockDetailScreenState extends ConsumerState<StockDetailScreen> {
 
           // Momentum
           Card(
+            elevation: 2,
+            shadowColor: Colors.black.withValues(alpha: 0.1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: context.colorScheme.primary.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -1056,6 +1109,15 @@ class _StockDetailScreenState extends ConsumerState<StockDetailScreen> {
 
           // Support & Resistance
           Card(
+            elevation: 2,
+            shadowColor: Colors.black.withValues(alpha: 0.1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: context.colorScheme.primary.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -1121,6 +1183,15 @@ class _StockDetailScreenState extends ConsumerState<StockDetailScreen> {
 
           // Overall Signal
           Card(
+            elevation: 2,
+            shadowColor: Colors.black.withValues(alpha: 0.1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: context.colorScheme.primary.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -1156,6 +1227,15 @@ class _StockDetailScreenState extends ConsumerState<StockDetailScreen> {
           // Signal List
           ...signalsList.map((signal) => Card(
             margin: const EdgeInsets.only(bottom: 12),
+            elevation: 2,
+            shadowColor: Colors.black.withValues(alpha: 0.1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: context.colorScheme.primary.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+            ),
             child: ListTile(
               leading: Icon(
                 signal['type'] == 'bullish' ? Icons.trending_up : Icons.trending_down,
@@ -1208,6 +1288,15 @@ class _StockDetailScreenState extends ConsumerState<StockDetailScreen> {
 
           // Primary Recommendation
           Card(
+            elevation: 2,
+            shadowColor: Colors.black.withValues(alpha: 0.1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: context.colorScheme.primary.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -1247,6 +1336,15 @@ class _StockDetailScreenState extends ConsumerState<StockDetailScreen> {
           const SizedBox(height: 8),
           ...(strategy['key_factors'] as List).map((factor) => Card(
             margin: const EdgeInsets.only(bottom: 8),
+            elevation: 2,
+            shadowColor: Colors.black.withValues(alpha: 0.1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: context.colorScheme.primary.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+            ),
             child: ListTile(
               leading: const Icon(Icons.check_circle, color: Color(AppColors.successColor)),
               title: Text(factor.toString()),
@@ -1265,6 +1363,15 @@ class _StockDetailScreenState extends ConsumerState<StockDetailScreen> {
             const SizedBox(height: 8),
             ...(strategy['risk_warnings'] as List).map((warning) => Card(
               margin: const EdgeInsets.only(bottom: 8),
+              elevation: 2,
+              shadowColor: Colors.black.withValues(alpha: 0.1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: context.colorScheme.primary.withValues(alpha: 0.3),
+                  width: 1.5,
+                ),
+              ),
               child: ListTile(
                 leading: const Icon(Icons.warning, color: Color(AppColors.warningColor)),
                 title: Text(warning.toString()),

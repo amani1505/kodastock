@@ -330,10 +330,25 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
         // Fixed tab bar
         _buildTabBar(context),
         const SizedBox(height: 16),
-        // Tab content
-        SizedBox(
-          height: MediaQuery.of(context).size.height * 0.6,
-          child: _buildTabContent(context),
+        // Tab content - using AnimatedBuilder to avoid nested scrolling
+        AnimatedBuilder(
+          animation: _tabController,
+          builder: (context, child) {
+            switch (_tabController.index) {
+              case 0:
+                return _buildOverviewTab(context);
+              case 1:
+                return _buildTechnicalAnalysisTab(context);
+              case 2:
+                return _buildFundamentalAnalysisTab(context);
+              case 3:
+                return _buildPredictionsTab(context);
+              case 4:
+                return _buildSignalsFlagsTab(context);
+              default:
+                return _buildOverviewTab(context);
+            }
+          },
         ),
       ],
     );
@@ -358,22 +373,9 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
     );
   }
 
-  Widget _buildTabContent(BuildContext context) {
-    return TabBarView(
-      controller: _tabController,
-      children: [
-        _buildOverviewTab(context),
-        _buildTechnicalAnalysisTab(context),
-        _buildFundamentalAnalysisTab(context),
-        _buildPredictionsTab(context),
-        _buildSignalsFlagsTab(context),
-      ],
-    );
-  }
-
   Widget _buildOverviewTab(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 16),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildStockCards(context),
         const SizedBox(height: 24),
@@ -387,8 +389,8 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
   }
 
   Widget _buildTechnicalAnalysisTab(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 16),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildPriceMovementChart(context),
         const SizedBox(height: 24),
@@ -400,8 +402,8 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
   }
 
   Widget _buildFundamentalAnalysisTab(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 16),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildFundamentalMetricsTable(context),
         const SizedBox(height: 20),
@@ -411,8 +413,8 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
   }
 
   Widget _buildPredictionsTab(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 16),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildPredictionCards(context),
         const SizedBox(height: 20),
@@ -424,8 +426,8 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
   }
 
   Widget _buildSignalsFlagsTab(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 16),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSignalsForStock(context, 'CRDB', 'CRDB'),
         const SizedBox(height: 24),
@@ -442,43 +444,66 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
     final bestPicks = _comparisonData['best_picks'];
     if (bestPicks == null) return const SizedBox.shrink();
 
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      children: [
-        if (bestPicks['best_overall'] != null)
-          _buildBadge(
-            context,
-            'BEST OVERALL',
-            bestPicks['best_overall']['symbol'] ?? '',
-            Colors.amber,
-            Icons.emoji_events,
-          ),
-        if (bestPicks['best_value'] != null)
-          _buildBadge(
-            context,
-            'BEST VALUE',
-            bestPicks['best_value']['symbol'] ?? '',
-            Colors.blue,
-            Icons.diamond,
-          ),
-        if (bestPicks['best_growth'] != null)
-          _buildBadge(
-            context,
-            'BEST GROWTH',
-            bestPicks['best_growth']['symbol'] ?? '',
-            Colors.purple,
-            Icons.rocket_launch,
-          ),
-        if (bestPicks['safest_pick'] != null)
-          _buildBadge(
-            context,
-            'SAFEST PICK',
-            bestPicks['safest_pick']['symbol'] ?? '',
-            Colors.green,
-            Icons.shield,
-          ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Column(
+          children: [
+            // First row
+            Row(
+              children: [
+                if (bestPicks['best_overall'] != null)
+                  Expanded(
+                    child: _buildBadge(
+                      context,
+                      'BEST OVERALL',
+                      bestPicks['best_overall']['symbol'] ?? '',
+                      Colors.amber,
+                      Icons.emoji_events,
+                    ),
+                  ),
+                const SizedBox(width: 12),
+                if (bestPicks['best_value'] != null)
+                  Expanded(
+                    child: _buildBadge(
+                      context,
+                      'BEST VALUE',
+                      bestPicks['best_value']['symbol'] ?? '',
+                      Colors.blue,
+                      Icons.diamond,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Second row
+            Row(
+              children: [
+                if (bestPicks['best_growth'] != null)
+                  Expanded(
+                    child: _buildBadge(
+                      context,
+                      'BEST GROWTH',
+                      bestPicks['best_growth']['symbol'] ?? '',
+                      Colors.purple,
+                      Icons.rocket_launch,
+                    ),
+                  ),
+                const SizedBox(width: 12),
+                if (bestPicks['safest_pick'] != null)
+                  Expanded(
+                    child: _buildBadge(
+                      context,
+                      'SAFEST PICK',
+                      bestPicks['safest_pick']['symbol'] ?? '',
+                      Colors.green,
+                      Icons.shield,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -488,29 +513,11 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
     final stocksList = _comparisonData['stocks'] as List<dynamic>?;
     if (stocksList == null || stocksList.isEmpty) return const SizedBox.shrink();
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Use column layout for small screens, row for larger screens
-        if (constraints.maxWidth < 600) {
-          return Column(
-            children: stocksList.map<Widget>((stockData) {
-              return _buildStockCard(context, stockData);
-            }).toList(),
-          );
-        }
-
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: stocksList.map<Widget>((stockData) {
-              return SizedBox(
-                width: constraints.maxWidth / stocksList.length - 16,
-                child: _buildStockCard(context, stockData),
-              );
-            }).toList(),
-          ),
-        );
-      },
+    // Single cards stacked vertically
+    return Column(
+      children: stocksList.map<Widget>((stockData) {
+        return _buildStockCard(context, stockData);
+      }).toList(),
     );
   }
 
@@ -549,6 +556,13 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
       elevation: 2,
       shadowColor: Colors.black.withValues(alpha: 0.1),
       margin: const EdgeInsets.only(bottom: 16, left: 8, right: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: context.colorScheme.primary.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -674,8 +688,8 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: context.colorScheme.primary.withValues(alpha: 0.2),
-          width: 1,
+          color: context.colorScheme.primary.withValues(alpha: 0.3),
+          width: 1.5,
         ),
       ),
       child: Padding(
@@ -775,6 +789,15 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
   Widget _buildDetailedAnalysisSection(BuildContext context) {
     return Card(
       color: Colors.grey[50],
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: context.colorScheme.primary.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -861,6 +884,15 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
 
   Widget _buildPriceMovementChart(BuildContext context) {
     return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: context.colorScheme.primary.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -906,6 +938,15 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
 
   Widget _buildTechnicalMetricsTable(BuildContext context) {
     return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: context.colorScheme.primary.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -974,6 +1015,15 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
 
   Widget _buildFundamentalMetricsTable(BuildContext context) {
     return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: context.colorScheme.primary.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -1109,8 +1159,8 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: context.colorScheme.primary.withValues(alpha: 0.2),
-          width: 1,
+          color: context.colorScheme.primary.withValues(alpha: 0.4),
+          width: 1.5,
         ),
       ),
       child: Padding(
@@ -1227,6 +1277,15 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
     final warningSignals = signals['warning'] ?? [];
 
     return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: context.colorScheme.primary.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -1390,7 +1449,10 @@ class _CompareScreenState extends ConsumerState<CompareScreen> with SingleTicker
       decoration: BoxDecoration(
         color: Colors.amber.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: Colors.amber.withValues(alpha: 0.5),
+          width: 1.5,
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
